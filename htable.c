@@ -9,14 +9,14 @@ typedef struct
     int len;
 } ENTRY;
 
-typedef struct
+typedef struct htable
 {
     ENTRY *entries;
     int nmemb;
     int dim;
 } TABLE;
 
-int init_htable(TABLE * table, int size) {
+int htable_init(TABLE *table, int size) {
     table->nmemb = 0;
     table->entries = (ENTRY *)calloc(size + (size / 2), sizeof(ENTRY));
     if (table->entries == NULL) {
@@ -26,7 +26,7 @@ int init_htable(TABLE * table, int size) {
     return 1;
 }
 
-void clear_htable(TABLE *table){
+void htable_clear(TABLE *table){
     int i;
     for (i = 0; i < table->dim; i++) {
         if (table->entries[i].len) {
@@ -39,7 +39,7 @@ void clear_htable(TABLE *table){
     table->dim = 0;
 }
 
-int get_entries_num(TABLE *table) {
+int htable_nmemb(TABLE *table) {
     return table->nmemb;
 }
 
@@ -56,7 +56,7 @@ uint64_t get_hash(uint64_t *str, int len) {
 }
 
 /* Insert in table an entry value of len bits */
-int insert(TABLE *table, uint64_t *value, int len) {
+int htable_insert(TABLE *table, uint64_t *value, int len) {
     uint64_t hash;
 
     // Table is full
@@ -85,7 +85,7 @@ int insert(TABLE *table, uint64_t *value, int len) {
 }
 
 /* Remove from table an entry value of len bits */
-int remove(TABLE *table, uint64_t *value, int len) {
+int htable_remove(TABLE *table, uint64_t *value, int len) {
     uint64_t hash;
     int search = 0;
 
