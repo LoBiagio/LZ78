@@ -1,2 +1,2 @@
 # LZ78
-Compressore LZ78 Beconcini Biagini Mola
+LZ78 Compressor by Beconcini, Biagini, Mola
