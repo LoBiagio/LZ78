@@ -2,7 +2,14 @@
 #define HASH_H_INCLUDED
 #include <stdint.h>
 
-typedef struct htable TABLE;
+typedef struct hentry ENTRY;
+
+typedef struct htable
+{
+    ENTRY *entries;
+    int nmemb;
+    int dim;
+} TABLE;
 
 int htable_init(TABLE *, int);
 void htable_clear(TABLE *);
