@@ -4,15 +4,9 @@
 
 typedef struct htable TABLE;
 
-//* Delete this block *//
-int DETECT_COLLISION, COLLISIONS;
-//*********************//
-
 TABLE *htable_new(int);
 void htable_clear(TABLE *);
 int htable_nmemb(TABLE *);
-int htable_insert(TABLE *, uint64_t *, int);
-int htable_remove(TABLE *, uint64_t *, int);
-int htable_search(TABLE *, uint64_t *, int, unsigned int *);
+int htable_insert(TABLE *, unsigned char, unsigned int, unsigned int *);
 
 #endif // HASH_H_INCLUDED
