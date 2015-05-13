@@ -8,5 +8,6 @@ TABLE *htable_new(int);
 void htable_clear(TABLE *);
 int htable_nmemb(TABLE *);
 int htable_insert(TABLE *, unsigned char, unsigned int, unsigned int *);
-
+int htable_index_bits(TABLE *);
+int htable_collision(TABLE *);
 #endif // HASH_H_INCLUDED
