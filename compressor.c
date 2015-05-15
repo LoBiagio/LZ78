@@ -22,13 +22,16 @@ int main() {
     while((ret = read(fd_r, &c, sizeof(char)))) {
         if (htable_insert(dictionary, c, father, &new_father) == 1) {
             bitio_write(fd_w, (uint64_t *)&father, htable_index_bits(dictionary));
-            printf("%c", c);
+            //printf("%c", c);
+           	printf("%u\n",father);
         }
         father = new_father;
+        
     }
-    if(father > 255) {
+    //if(father > 255) {
         bitio_write(fd_w, (uint64_t *)&father, htable_index_bits(dictionary));
-    }
+        //printf("%u\n",father);
+    //}
     printf("%d,%d\n", htable_nmemb(dictionary), htable_collision(dictionary));
     close(fd_r);
     bitio_close(fd_w);
