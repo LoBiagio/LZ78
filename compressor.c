@@ -32,6 +32,7 @@ int main() {
         bitio_write(fd_w, (uint64_t *)&father, htable_index_bits(dictionary));
         //printf("%u\n",father);
     //}
+    	//bitio_write (fd_w, 0, 1);
     printf("%d,%d\n", htable_nmemb(dictionary), htable_collision(dictionary));
     close(fd_r);
     bitio_close(fd_w);
