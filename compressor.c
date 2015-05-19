@@ -24,6 +24,7 @@ int main() {
             bitio_write(fd_w, (uint64_t *)&father, htable_index_bits(dictionary));
             //printf("%c", c);
            	printf("%u\n",father);
+           	printf("%d\n",htable_index_bits(dictionary));
         }
         father = new_father;
         
