@@ -110,7 +110,7 @@ int htable_insert(TABLE *table, unsigned char value, unsigned int father, unsign
 }
 
 int htable_index_bits(TABLE *table) {
-    return (int)log2(table->nmemb + 255) + 1;
+    return (int)ceil(log2(table->nmemb + 256));
 }
 
 void htable_destroy(TABLE *table) {

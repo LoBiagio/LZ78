@@ -72,7 +72,7 @@ explore_darray (struct darray *da, unsigned int index, char *buf, unsigned char 
 	offset = da->dim-1; 
 	if ( index < 256 ){ //we are already at the first level of the tree
 		*value = (unsigned char)index;
-		buf[offset] = index;
+		buf[offset] = (unsigned char)index;
 		return 1;
 	}
 	
@@ -84,7 +84,7 @@ explore_darray (struct darray *da, unsigned int index, char *buf, unsigned char 
 	buf[offset] = da->dictionary[index-256].value;
 	buf[--offset] = (unsigned char)da->dictionary[index-256].father;
 	*value = (unsigned char)da->dictionary[index-256].father;
-	return da->dim - offset -1;
+	return da->dim - offset;
 }
 
 int main() {
@@ -102,7 +102,7 @@ int main() {
 		perror("error on array_new");
 	}
 	buf = calloc(DICT_SIZE, sizeof(unsigned char));
-	while( (ret = bitio_read (fd_r, &tmp, (int)log2(da->nmemb + 256) ) > 0 )){
+	while( (ret = bitio_read (fd_r, &tmp, (int)ceil(log2(da->nmemb + 256 + 1)) ) > 0 )){
 		buf_len = explore_darray(da, (unsigned int)tmp, buf, &old_value);
 		insert(da, father, old_value);
 		printf("%d\n",father);
@@ -112,7 +112,7 @@ int main() {
 		printf("%d\n",father);
 		write(fd_w, &buf[da->dim - buf_len], buf_len);
 	}
-	write(fd_w, &old_value, 1);
+	//write(fd_w, &old_value, 1);
 	bitio_close(fd_r);
 	close(fd_w);
 	return 0;	 

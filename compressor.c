@@ -30,7 +30,7 @@ int main() {
     }
     //if(father > 255) {
         bitio_write(fd_w, (uint64_t *)&father, htable_index_bits(dictionary));
-        //printf("%u\n",father);
+        printf("%u\ton%d bits\n",father, htable_index_bits(dictionary));
     //}
     	//bitio_write (fd_w, 0, 1);
     printf("%d,%d\n", htable_nmemb(dictionary), htable_collision(dictionary));
