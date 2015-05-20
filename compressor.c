@@ -23,13 +23,14 @@ int main() {
         if (htable_insert(dictionary, c, father, &new_father) == 1) {
             bitio_write(fd_w, (uint64_t *)&father, htable_index_bits(dictionary));
             //printf("%c", c);
-           	//printf("%u\n",father);
+           	printf("%u\n",father);
            	//printf("%d\n",htable_index_bits(dictionary));
         }
         father = new_father;
         
     }
     bitio_write(fd_w, (uint64_t *)&father, htable_index_bits(dictionary));
+    printf("%u\n",father);
     father= 0;
     bitio_write(fd_w, (uint64_t *)&father, htable_index_bits(dictionary));
     printf("%d,%d\n", htable_nmemb(dictionary), htable_collision(dictionary));
