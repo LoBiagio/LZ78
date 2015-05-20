@@ -8,7 +8,7 @@
 #include <errno.h>
 #include <string.h>
 #include <math.h>
-#define DICT_SIZE 2000
+#define DICT_SIZE 10000
 typedef struct
 {
 	unsigned int father;
@@ -38,8 +38,12 @@ array_new(unsigned int size)
 	tmp->nmemb = 0;
 	tmp->dim = size;
 	return tmp;		
-};
-
+}
+void
+array_reset (struct darray *da){
+	memset(da->dictionary, 0, sizeof(DENTITY)*da->dim);
+	da->nmemb = 0;
+}
 /*
  * Returns the number of entries currently in the dictionary
  */
@@ -47,9 +51,13 @@ int
 insert (struct darray *da, unsigned int father, unsigned char value)
 {
 	if(father > 0){
+		da->nmemb++;
+		if (da->nmemb == da->dim){
+			array_reset(da);
+		}
 		da->dictionary[da->nmemb].father = father;
 		da->dictionary[da->nmemb].value = value;
-		da->nmemb++;
+				
 	}
 	return da->nmemb;
 }
@@ -103,12 +111,18 @@ int main() {
 	}
 	buf = calloc(DICT_SIZE, sizeof(unsigned char));
 	while( (ret = bitio_read (fd_r, &tmp, (int)log2(da->nmemb + 256)+1 ) > 0 )){
+		if((unsigned int)tmp == 0){
+			break;
+		}
 		buf_len = explore_darray(da, (unsigned int)tmp, buf, &old_value);
 		insert(da, father, old_value);
-		printf("%d\n",father);
-		printf("%c\n",old_value);
+		//printf("father: %d\n",father);
+		//printf("value: %c\n",old_value);
 		father = (unsigned int)tmp;
+		//printf ("new_father: %d\n",father);
+		
 		write(fd_w, &buf[da->dim - buf_len], buf_len);
+	//	write(0, &buf[da->dim - buf_len], buf_len);
 	}
 //	write(fd_w, &oldvalue, 1);
 	bitio_close(fd_r);
