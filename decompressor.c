@@ -51,13 +51,13 @@ int
 insert (struct darray *da, unsigned int father, unsigned char value)
 {
 	if(father > 0){
-		da->nmemb++;
-		if (da->nmemb == da->dim){
+		
+		if (da->nmemb == da->dim-1){
 			array_reset(da);
 		}
 		da->dictionary[da->nmemb].father = father;
 		da->dictionary[da->nmemb].value = value;
-				
+		da->nmemb++;		
 	}
 	return da->nmemb;
 }
@@ -114,15 +114,29 @@ int main() {
 		if((unsigned int)tmp == 0){
 			break;
 		}
+	/*	if(tmp != (uint64_t)get_size(da)+256){
+			buf_len = explore_darray(da, (unsigned int)tmp, buf, &old_value);
+		}
+		else{
+			buf_len = explore_darray(da,father,buf,&old_value);
+		}*/
+		if(tmp == (uint64_t)get_size(da)+256){
+			insert(da,father,old_value);
+			buf_len = explore_darray(da, (unsigned int)tmp,buf,&old_value);
+		}
+		else{
 		buf_len = explore_darray(da, (unsigned int)tmp, buf, &old_value);
 		insert(da, father, old_value);
-		//printf("father: %d\n",father);
-		//printf("value: %c\n",old_value);
+		}
+		printf("father: %d\n",father);
+		printf("value: %c\n",old_value);
+	//	old_father = father;
 		father = (unsigned int)tmp;
 		//printf ("new_father: %d\n",father);
 		
 		write(fd_w, &buf[da->dim - buf_len], buf_len);
-	//	write(0, &buf[da->dim - buf_len], buf_len);
+		write(0, &buf[da->dim - buf_len], buf_len);
+		printf("\n");
 	}
 //	write(fd_w, &oldvalue, 1);
 	bitio_close(fd_r);
