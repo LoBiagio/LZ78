@@ -5,7 +5,7 @@
 #include <stdio.h>
 #include <math.h>
 
-typedef struct hentry //TODO//FIXME
+typedef struct hentry
 {
     unsigned char value;
     unsigned int father; // All the elements with father = 0 are outside the dictionary
@@ -85,11 +85,6 @@ int htable_getPosition(TABLE *table, unsigned char value, int father, unsigned i
 */
 int htable_insert(TABLE *table, unsigned char value, unsigned int father, unsigned int *new_father) {
     unsigned int position;
-    // Table is full
-    if (table->nmemb == table->dim) {
-        htable_clear(table);
-        //printf("Dizionario azzerato\n");
-    }
     // Element already in table
     if (htable_getPosition(table, value, father, &position)) {
         if (father == 0) {
@@ -100,6 +95,15 @@ int htable_insert(TABLE *table, unsigned char value, unsigned int father, unsign
         }
         return 0;
     }
+
+    // Table is full
+    if (table->nmemb == table->dim) {
+        htable_clear(table);
+        //printf("Dizionario azzerato\n");
+        *new_father = (unsigned int)value;
+        return 1;
+    }
+
     // Insert value
     table->entries[position].value = value;
     table->entries[position].father = father;
