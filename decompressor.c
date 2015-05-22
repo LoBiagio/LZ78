@@ -43,6 +43,7 @@ void
 array_reset (struct darray *da){
 	memset(da->dictionary, 0, sizeof(DENTITY)*da->dim);
 	da->nmemb = 0;
+	printf("DICTIONARY RESET\n");
 }
 /*
  * Returns the number of entries currently in the dictionary
@@ -57,8 +58,8 @@ insert (struct darray *da, unsigned int father, unsigned char value)
 		}
 		da->dictionary[da->nmemb].father = father;
 		da->dictionary[da->nmemb].value = value;
-		da->nmemb++;		
-	}
+		da->nmemb++;
+		}
 	return da->nmemb;
 }
 
@@ -110,33 +111,32 @@ int main() {
 		perror("error on array_new");
 	}
 	buf = calloc(DICT_SIZE, sizeof(unsigned char));
-	while( (ret = bitio_read (fd_r, &tmp, (int)log2(da->nmemb + 256)+1 ) > 0 )){
+	while( (ret = bitio_read (fd_r, &tmp, da->nmemb==da->dim-1?9:((int)log2(da->nmemb + 257)+1 )) > 0 )){
 		if((unsigned int)tmp == 0){
 			break;
 		}
-	/*	if(tmp != (uint64_t)get_size(da)+256){
-			buf_len = explore_darray(da, (unsigned int)tmp, buf, &old_value);
-		}
-		else{
-			buf_len = explore_darray(da,father,buf,&old_value);
-		}*/
-		if(tmp == (uint64_t)get_size(da)+256){
+		if(tmp == (uint64_t)get_size(da)+256) {
 			insert(da,father,old_value);
+			//printf("insert node %u of value %c in fahter %u\n",da->nmemb+256,old_value,father);
 			buf_len = explore_darray(da, (unsigned int)tmp,buf,&old_value);
+			printf("SEI ENTRATO QUI\n");
 		}
 		else{
-		buf_len = explore_darray(da, (unsigned int)tmp, buf, &old_value);
-		insert(da, father, old_value);
+		//	printf("number of bits:%d\n",da->nmemb==da->dim-1?9:((int)log2(da->nmemb + 257)+1));
+		//	printf("explore_darray execution with tmp:%u\n",(unsigned int)tmp);
+			buf_len = explore_darray(da, (unsigned int)tmp, buf, &old_value);
+		//	printf("explore_darray completed, value:%c\n",old_value);
+			insert(da, father, old_value);
+		//	printf("insert node %u of value %c in fahter %u\n",da->nmemb+256-1,old_value,father);
+			//printf("number of bits:%d\n",(int)log2(da->nmemb + 256)+1);
 		}
-		printf("father: %d\n",father);
-		printf("value: %c\n",old_value);
-	//	old_father = father;
+	//	printf("father: %d\n",father);
+	//	printf("value: %c node:%d\n",old_value,da->nmemb+256-1);
 		father = (unsigned int)tmp;
-		//printf ("new_father: %d\n",father);
 		
 		write(fd_w, &buf[da->dim - buf_len], buf_len);
-		write(0, &buf[da->dim - buf_len], buf_len);
-		printf("\n");
+	//	write(0, &buf[da->dim - buf_len], buf_len);
+	//	printf("\n");
 	}
 //	write(fd_w, &oldvalue, 1);
 	bitio_close(fd_r);

@@ -5,6 +5,7 @@
 #include <fcntl.h>
 #include "htable.h"
 #include "bitio.h"
+#include <math.h>
 #define DICT_SIZE 10000
 
 int main() {
@@ -12,7 +13,7 @@ int main() {
     struct bitio *fd_w;
     int ret;
     unsigned char c;
-    unsigned int father = 0, new_father;
+    unsigned int father = 0, new_father,reset = 0;
     TABLE *dictionary;
 
     fd_r = open("B", O_RDONLY);
@@ -20,11 +21,18 @@ int main() {
     dictionary = htable_new(DICT_SIZE);
 
     while((ret = read(fd_r, &c, sizeof(char)))) {
-        if (htable_insert(dictionary, c, father, &new_father) == 1) {
-            bitio_write(fd_w, (uint64_t *)&father, htable_index_bits(dictionary));
-            //printf("%c", c);
-           	printf("%u\n",father);
-           	//printf("%d\n",htable_index_bits(dictionary));
+        if (htable_insert(dictionary, c, father, &new_father,&reset) == 1) {
+        	if (reset == 1){
+            	bitio_write(fd_w, (uint64_t *)&father, (int)log2(DICT_SIZE -1 + 255) + 1);
+            	reset = 0;
+            }
+            else {
+            	bitio_write(fd_w, (uint64_t *)&father, htable_index_bits(dictionary));
+            }
+		    //printf("value:%c\n", c);
+		  	//printf("father:%u\n",father);
+		 	//printf("elements%u\n",htable_nmemb(dictionary)+255);
+			//printf("bit:%d\n",htable_index_bits(dictionary));
         }
         father = new_father;
         

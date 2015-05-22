@@ -83,14 +83,9 @@ int htable_getPosition(TABLE *table, unsigned char value, int father, unsigned i
     It returns <1> if insertion succeeds
                <0> if <value, father> is already in table
 */
-int htable_insert(TABLE *table, unsigned char value, unsigned int father, unsigned int *new_father) {
+int htable_insert(TABLE *table, unsigned char value, unsigned int father, unsigned int *new_father,unsigned int *reset) {
     unsigned int position;
-    // Table is full
-    if (table->nmemb == table->dim) {
-        htable_clear(table);
-        //printf("Dizionario azzerato\n");
-    }
-    // Element already in table
+        // Element already in table
     if (htable_getPosition(table, value, father, &position)) {
         if (father == 0) {
             *new_father = (unsigned int)value;
@@ -99,6 +94,12 @@ int htable_insert(TABLE *table, unsigned char value, unsigned int father, unsign
             *new_father = table->entries[position].index;
         }
         return 0;
+    }
+    // Table is full
+    if (table->nmemb == table->dim-1) {
+        htable_clear(table);
+        printf("DIZIONARIO AZZERATO\n");
+        *reset = 1;
     }
     // Insert value
     table->entries[position].value = value;
