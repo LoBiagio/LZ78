@@ -5,7 +5,7 @@
 #include <stdio.h>
 #include <math.h>
 
-typedef struct hentry
+typedef struct hentry //TODO//FIXME
 {
     unsigned char value;
     unsigned int father; // All the elements with father = 0 are outside the dictionary
@@ -114,7 +114,7 @@ int htable_insert(TABLE *table, unsigned char value, unsigned int father, unsign
 }
 
 int htable_index_bits(TABLE *table) {
-    return (int)log2(table->nmemb + 255) + 1;
+    return table->nmemb == 0 ? (int)ceil(log2(table->dim + 256)) : (int)ceil(log2(table->nmemb + 256));
 }
 
 void htable_destroy(TABLE *table) {
