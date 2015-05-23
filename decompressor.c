@@ -8,7 +8,7 @@
 #include <errno.h>
 #include <string.h>
 #include <math.h>
-#define DICT_SIZE 10000
+#include <time.h>
 typedef struct
 {
 	unsigned int father;
@@ -30,7 +30,7 @@ array_new(unsigned int size)
 	if (tmp == NULL){
 		return NULL;
 	}
-	tmp->dictionary = calloc(DICT_SIZE,sizeof(DENTITY));
+	tmp->dictionary = calloc(size, sizeof(DENTITY));
 	if (tmp->dictionary == NULL){
 		return NULL;
 	}
@@ -94,30 +94,114 @@ insert_node(struct darray *da, unsigned int father) {
     da->nmemb++;
 }
 
+int read_header(struct bitio *fd, int *dict_size) {
+    int ret, i;
+    char *string;
+    uint64_t buf, tmp;
+    // File name length
+    ret = bitio_read(fd, &buf, 8);
+    if (ret != 8) {
+        printf("Error reading file name length\n");
+        return -1;
+    }
+
+    string = (char *)malloc(buf + 1);
+    if (string == NULL) {
+        printf("Error allocating memory for file name\n");
+        return -1;
+    }
+    // File name
+    string[buf] = '\0';
+    for (i = 0; i < buf; i++) {
+        ret = bitio_read(fd, &tmp, 8);
+        if (ret != 8) {
+            printf("Error reading file name\n");
+            free(string);
+            return -1;
+        }
+        string[i] = (char)tmp;
+    }
+    printf("Original file name: %s\n", string);
+    free(string);
+    // File size
+    ret = bitio_read(fd, &buf, 64);
+    if (ret != 64) {
+            printf("Error reading file size\n");
+            return -1;
+        }
+    buf = le64toh(buf);
+    printf("Original file size: %lu bytes\n", buf);
+    // Last modification
+    ret = bitio_read(fd, &buf, 64);
+    if (ret != 64) {
+            printf("Error reading file's last modification\n");
+            return -1;
+        }
+    buf = le64toh(buf);
+    printf("Last modification: %s\n", ctime((time_t *)&buf));
+    // File checksum
+    // TODO
+
+    // Dictionary length
+    ret = bitio_read(fd, &buf, 32);
+    if (ret != 32) {
+        printf("Error reading dictionary length\n");
+        return -1;
+    }
+    buf = le32toh(buf);
+    *dict_size = buf;
+    return 0;
+}
+
 int main() {
 	int fd_w;
 	struct bitio *fd_r;
 	struct darray *da;
 	unsigned char *buf;
-	int buf_len, buf_size, ret;
+	int dict_size, buf_len, buf_size, ret;
 	uint64_t code;
 
-	fd_r = bitio_open ("compressed", 'r');
-	fd_w = open ("B_NEW", (O_CREAT | O_TRUNC | O_WRONLY) , 0666);
-	if( (da = array_new(DICT_SIZE)) == NULL){
-		perror("error on array_new");
+
+	if ((fd_r = bitio_open ("compressed", 'r')) == NULL) {
+        printf("Error opening file in read mode\n");
+        exit(1);
 	}
-	buf_size = (int)ceil(sqrt(DICT_SIZE + 1) * 2);
+	if ((fd_w = open ("B_NEW", (O_CREAT | O_TRUNC | O_WRONLY) , 0666)) < 0) {
+        printf("Error opening file in write mode\n");
+        bitio_close(fd_r);
+        exit(1);
+	}
+
+    if (read_header(fd_r, &dict_size) < 0) {
+        goto end;
+    }
+
+	if( (da = array_new(dict_size)) == NULL){
+		perror("Error on array_new");
+		goto end;
+	}
+	buf_size = (int)ceil(sqrt(dict_size + 1) * 2);
 	buf = calloc(buf_size, sizeof(unsigned char));
+    if (buf == NULL) {
+        printf("Error allocating buffer for string reversing\n");
+        goto end;
+    }
+
+
 	// Read first code from compressor which is also the first char of the text
     if (bitio_read(fd_r, &code, 9) < 0) {
-        exit(1);
+        printf("Error reading the compressed file\n");
+        goto end;
     }
     buf_len = 1;
     // A node is inserted in the dictionary whose value will be known with the next code read
     // and whose father is the code just read
     insert_node(da, (unsigned int)code);
-    write(fd_w, &code, sizeof(unsigned char));
+    ret = write(fd_w, &code, sizeof(unsigned char));
+    if (ret != sizeof(unsigned char)) {
+        printf("Error writing the decompressed file\n");
+        goto end;
+    }
 
 
 	while ((ret = bitio_read(fd_r, &code, (int)ceil(log2(da->nmemb + 257))) > 0)){
@@ -130,7 +214,11 @@ int main() {
 		if (da->nmemb) {
             da->dictionary[da->nmemb-1].value = buf[buf_size-1];
 		}
-        write(fd_w, buf + buf_size - buf_len, buf_len);
+        ret = write(fd_w, buf + buf_size - buf_len, buf_len);
+        if (ret != buf_len) {
+            printf("Error writing the decompressed file\n");
+            goto end;
+        }
 
         // buf is filled with the values of the branch that has code as a leaf
         // (from code to the second level of the tree)
@@ -139,10 +227,18 @@ int main() {
         buf_len = explore_darray(da, (unsigned int)code, buf, buf_size);
         insert_node(da, (unsigned int)code);
 	}
+	if (ret < 0) {
+        printf("Error reading the compressed file\n");
+        goto end;
+	}
 	// Write values which are still in buf
 	// Note that last value of buf is 0 and it is not written
 	write(fd_w, buf + buf_size - buf_len, buf_len - 1);
 	bitio_close(fd_r);
 	close(fd_w);
 	return 0;
+end:
+    bitio_close(fd_r);
+	close(fd_w);
+    exit(1);
 }
