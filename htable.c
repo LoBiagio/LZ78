@@ -85,11 +85,6 @@ int htable_getPosition(TABLE *table, unsigned char value, int father, unsigned i
 */
 int htable_insert(TABLE *table, unsigned char value, unsigned int father, unsigned int *new_father) {
     unsigned int position;
-    // Table is full
-    if (table->nmemb == table->dim) {
-        htable_clear(table);
-        //printf("Dizionario azzerato\n");
-    }
     // Element already in table
     if (htable_getPosition(table, value, father, &position)) {
         if (father == 0) {
@@ -100,6 +95,15 @@ int htable_insert(TABLE *table, unsigned char value, unsigned int father, unsign
         }
         return 0;
     }
+
+    // Table is full
+    if (table->nmemb == table->dim) {
+        htable_clear(table);
+        //printf("Dizionario azzerato\n");
+        *new_father = (unsigned int)value;
+        return 1;
+    }
+
     // Insert value
     table->entries[position].value = value;
     table->entries[position].father = father;
@@ -110,7 +114,7 @@ int htable_insert(TABLE *table, unsigned char value, unsigned int father, unsign
 }
 
 int htable_index_bits(TABLE *table) {
-    return (int)ceil(log2(table->nmemb + 256));
+    return table->nmemb == 0 ? (int)ceil(log2(table->dim + 256)) : (int)ceil(log2(table->nmemb + 256));
 }
 
 void htable_destroy(TABLE *table) {

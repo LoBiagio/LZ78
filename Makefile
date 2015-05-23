@@ -30,4 +30,4 @@ htable.o: htable.c
 	$(CC) $(CFLAGS) $? -o $@
 
 clean:
-	rm -fr *.o; if [ -e B_NEW ] ; then rm B_NEW ; fi
+	rm -fr *.o; if [ -e B_NEW ] ; then rm B_NEW ; fi; if [ -e compressed ] ; then rm compressed ; fi

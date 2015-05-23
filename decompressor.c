@@ -8,7 +8,8 @@
 #include <errno.h>
 #include <string.h>
 #include <math.h>
-#define DICT_SIZE 2000
+#define DICT_SIZE 2
+
 typedef struct
 {
 	unsigned int father;
@@ -35,22 +36,34 @@ array_new(unsigned int size)
 		return NULL;
 	}
 	memset(tmp->dictionary,0,DICT_SIZE * sizeof(DENTITY));
+	//tmp->nmemb = -1;
 	tmp->nmemb = 0;
 	tmp->dim = size;
 	return tmp;		
-};
-
+}
+void
+array_reset (struct darray *da){
+	memset(da->dictionary, 0, sizeof(DENTITY)*da->dim);
+	da->nmemb = 0;
+}
 /*
  * Returns the number of entries currently in the dictionary
  */
 int
 insert (struct darray *da, unsigned int father, unsigned char value)
 {
-	if(father > 0){
+	if(father > 0){		
+		
 		da->dictionary[da->nmemb].father = father;
 		da->dictionary[da->nmemb].value = value;
 		da->nmemb++;
+		if (da->nmemb >= da->dim){
+			array_reset(da);
+			printf("Dizionario azzerato\n");
+			fflush(0);
+		}		
 	}
+	//da->nmemb++;
 	return da->nmemb;
 }
 
@@ -87,6 +100,64 @@ explore_darray (struct darray *da, unsigned int index, char *buf, unsigned char 
 	return da->dim - offset;
 }
 
+/*
+ * @param da pointer to decompressor's dictionary.
+ * @param father The father of the new node.
+ * @param index The value that must be decoded.
+ * @param old_value last value written at the previous iteration.
+ * @param buf The destination buffer of the decoded characters
+ * @return the number of bytes returned in buf
+ */
+int
+explore_and_insert(struct darray* da, unsigned int father, unsigned int index, unsigned char* old_value, unsigned char* buf)
+{
+	unsigned int buf_len;
+	
+	if (father == 0) { //only first label received. Value to be added is unknow, so we don't perform an insert.
+		
+		//exploring
+		buf_len = explore_darray(da, index, buf, old_value);
+		return buf_len;
+	}
+	
+	if (index == get_size(da) + 256) { //The 'recursion' case
+		
+		//adding
+		da->dictionary[da->nmemb].father = father;
+		da->dictionary[da->nmemb].value = (unsigned int)*old_value;
+		da->nmemb++;
+		
+		//exploring
+		buf_len = explore_darray(da, index, buf, old_value);
+		
+		//there may be the need for a dictionary reset
+		if (da->nmemb >= da->dim) {
+			array_reset(da);
+			printf("Dizionario azzerato\n");
+			fflush(0);
+		}
+		
+		return buf_len;
+	}
+	
+	//exploring
+	buf_len = explore_darray(da, index, buf, old_value);
+	
+	//adding
+	da->dictionary[da->nmemb].father = father;
+	da->dictionary[da->nmemb].value = (unsigned int)*old_value;
+	da->nmemb++;
+	
+	//there may be the need for a dictionary reset
+	if (da->nmemb >= da->dim) {
+		array_reset(da);
+		printf("Dizionario azzerato\n");
+		fflush(0);
+	}
+	
+	return buf_len;		
+}
+
 int main() {
 	int fd_w;
 	int ret;
@@ -102,17 +173,32 @@ int main() {
 		perror("error on array_new");
 	}
 	buf = calloc(DICT_SIZE, sizeof(unsigned char));
-	while( (ret = bitio_read (fd_r, &tmp, (int)ceil(log2(da->nmemb + 256 + 1)) ) > 0 )){
-		buf_len = explore_darray(da, (unsigned int)tmp, buf, &old_value);
-		insert(da, father, old_value);
-		printf("%d\n",father);
-		printf("%c\n",old_value);
-		//fflush(0);
+	printf("START\n");
+	fflush(0);
+	while( (ret = bitio_read (fd_r, &tmp, (int)(log2(da->nmemb + 257)+1)) > 0 )){
+	//while( (ret = bitio_read (fd_r, &tmp, 9) > 0 )){
+		//printf("letti %d bits\n", 9);
+		printf("Letto %u\n", (unsigned int)tmp);
+		fflush(0);
+		if((unsigned int)tmp == 0){
+			break;
+		}
+		
+		//Here happens the magic...
+		buf_len = explore_and_insert(da, father, (unsigned int)tmp, &old_value, buf);
+		
+		//printf("letti %d bits\n", ret);
+		//printf("father: %d\n",father);
+		//printf("value: %c\n\n",old_value);
+	//	old_father = father;
 		father = (unsigned int)tmp;
-		printf("%d\n",father);
+		//printf ("new_father: %d\n",father);
+		
 		write(fd_w, &buf[da->dim - buf_len], buf_len);
+		//write(0, &buf[da->dim - buf_len], buf_len);
+		//printf("\n");
 	}
-	//write(fd_w, &old_value, 1);
+//	write(fd_w, &oldvalue, 1);
 	bitio_close(fd_r);
 	close(fd_w);
 	return 0;	 

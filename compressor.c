@@ -5,7 +5,7 @@
 #include <fcntl.h>
 #include "htable.h"
 #include "bitio.h"
-#define DICT_SIZE 2000
+#define DICT_SIZE 2
 
 int main() {
     int fd_r;
@@ -22,18 +22,12 @@ int main() {
     while((ret = read(fd_r, &c, sizeof(char)))) {
         if (htable_insert(dictionary, c, father, &new_father) == 1) {
             bitio_write(fd_w, (uint64_t *)&father, htable_index_bits(dictionary));
-            //printf("%c", c);
-           	printf("%u\n",father);
         }
         father = new_father;
-        
     }
-    //if(father > 255) {
-        bitio_write(fd_w, (uint64_t *)&father, htable_index_bits(dictionary));
-        printf("%u\ton%d bits\n",father, htable_index_bits(dictionary));
-    //}
-    	//bitio_write (fd_w, 0, 1);
-    printf("%d,%d\n", htable_nmemb(dictionary), htable_collision(dictionary));
+    bitio_write(fd_w, (uint64_t *)&father, htable_index_bits(dictionary));
+    father = 0;
+    bitio_write(fd_w, (uint64_t *)&father, htable_index_bits(dictionary));
     close(fd_r);
     bitio_close(fd_w);
     return 0;
