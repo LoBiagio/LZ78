@@ -3,21 +3,89 @@
 #include <stdio.h>
 #include <stdint.h>
 #include <fcntl.h>
+#include <string.h>
+#include <endian.h>
+#include <sys/stat.h>
+#include <sys/types.h>
 #include "htable.h"
 #include "bitio.h"
 #define DICT_SIZE 10000
 
+int write_header(int fd_r, struct bitio *fd_w, char *filename, int dict_size) {
+    int ret, i, size;
+    uint64_t file_size, last_mod;
+    struct stat file_info;
+    if (fstat(fd_r, &file_info) < 0) {
+        perror("Error retriving file info: ");
+        return -1;
+    }
+    // File name length
+    size = strlen(filename);
+    ret = bitio_write(fd_w, (uint64_t *)&size, 8);
+    if (ret != 8) {
+        printf("Error writing file name length\n");
+        return -1;
+    }
+    // File name
+    for (i = 0; i < size; i++) {
+        ret = bitio_write(fd_w, (uint64_t *)&filename[i], 8);
+        if (ret != 8) {
+            printf("Error writing file name\n");
+            return -1;
+        }
+    }
+    // File size
+    file_size = htole64((uint64_t)file_info.st_size);
+    ret = bitio_write(fd_w, &file_size, 64);
+    if (ret != 64) {
+        printf("Error writing file size\n");
+        return -1;
+    }
+    // Time of last modification
+    last_mod = htole64((uint64_t)file_info.st_mtim.tv_sec);
+    ret = bitio_write(fd_w, &last_mod, 64);
+    if (ret != 64) {
+        printf("Error writing file's last modification\n");
+        return -1;
+    }
+    // File checksum
+    // TODO
+
+    // Dictionary length
+    dict_size = htole32(dict_size);
+    ret = bitio_write(fd_w, (uint64_t *)&dict_size, 32);
+    if (ret != 32) {
+        printf("Error writing dictionary length\n");
+        return -1;
+    }
+    return 0;
+}
+
 int main() {
-    int fd_r;
+    int fd_r, dict_size = DICT_SIZE;
     struct bitio *fd_w;
     int ret;
+    char *filename = "B";
     unsigned char c;
     unsigned int father = 0, new_father;
     TABLE *dictionary;
 
-    fd_r = open("B", O_RDONLY);
-    fd_w = bitio_open("compressed", 'w');
-    dictionary = htable_new(DICT_SIZE);
+    if ((fd_r = open("B", O_RDONLY)) < 0) {
+        perror("Error opening file in read mode: ");
+        exit(1);
+    }
+    if ((fd_w = bitio_open("compressed", 'w')) == NULL) {
+        perror("Error opening file in write mode: ");
+        exit(1);
+    }
+    dictionary = htable_new(dict_size);
+
+    if (write_header(fd_r, fd_w, filename, dict_size) < 0) {
+        close(fd_r);
+        bitio_close(fd_w);
+        htable_destroy(dictionary);
+        exit(1);
+    }
 
     while((ret = read(fd_r, &c, sizeof(char)))) {
         if (htable_insert(dictionary, c, father, &new_father) == 1) {
@@ -28,6 +96,8 @@ int main() {
     bitio_write(fd_w, (uint64_t *)&father, htable_index_bits(dictionary));
     father = 0;
     bitio_write(fd_w, (uint64_t *)&father, htable_index_bits(dictionary));
+
+    htable_destroy(dictionary);
     close(fd_r);
     bitio_close(fd_w);
     return 0;
