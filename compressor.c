@@ -62,7 +62,7 @@ int write_header(int fd_r, struct bitio *fd_w, char *filename, int dict_size) {
 }
 
 int main() {
-    int fd_r, dict_size = DICT_SIZE;
+    int fd_r, dict_size = DICT_SIZE, i, r;
     struct bitio *fd_w;
     int ret;
     char *filename = "B";
@@ -76,6 +76,7 @@ int main() {
     }
     if ((fd_w = bitio_open("compressed", 'w')) == NULL) {
         perror("Error opening file in write mode: ");
+        close(fd_r);
         exit(1);
     }
     dictionary = htable_new(dict_size);
@@ -87,11 +88,20 @@ int main() {
         exit(1);
     }
 
-    while((ret = read(fd_r, &c, sizeof(char)))) {
+    while((ret = read(fd_r, &c, sizeof(char))) > 0) {
         if (htable_insert(dictionary, c, father, &new_father) == 1) {
-            bitio_write(fd_w, (uint64_t *)&father, htable_index_bits(dictionary));
+            i = htable_index_bits(dictionary);
+            r = bitio_write(fd_w, (uint64_t *)&father, i);
+            if (r != i) {
+                printf("Error writing the compressed file\n");
+                goto end;
+            }
         }
         father = new_father;
+    }
+    if (ret < 0) {
+        printf("Error reading file to compress\n");
+        goto end;
     }
     bitio_write(fd_w, (uint64_t *)&father, htable_index_bits(dictionary));
     father = 0;
@@ -101,4 +111,9 @@ int main() {
     close(fd_r);
     bitio_close(fd_w);
     return 0;
+end:
+    htable_destroy(dictionary);
+    close(fd_r);
+    bitio_close(fd_w);
+    exit(1);
 }
