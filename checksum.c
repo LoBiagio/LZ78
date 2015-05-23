@@ -2,11 +2,12 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <fcntl.h>
-typedef struct
+#include "checksum.h"
+struct checksum_environment
 {
 	unsigned int count;
 	uint32_t partial, buf;
-}CHECKENV;
+};
 
 CHECKENV*
 checksum_init ()
@@ -65,29 +66,3 @@ checksum_is_valid (CHECKENV *ce, uint32_t in)
 	return (ce->partial + in == 0); 
 }
 
-int main()
-{
-	CHECKENV *ce;
-	char c;
-	int fd;
-	uint32_t tmp, val;
-	if((ce = checksum_init()) == NULL){
-		printf("error on checksum init\n");
-		return 1;
-	}
-/*	checksum_update(ce,tmp,1);
-//	printf("%d\n",(int)checksum_final(ce));
-	val = checksum_final(ce);
-	printf("%d\n",checksum_is_valid(ce,val));
-*/
-	fd = open("B", O_RDONLY);
-	while( read(fd,	&c, 1)){
-		tmp = (uint32_t)c;
-		checksum_update(ce, tmp, 1);
-	}
-	val = checksum_final(ce);
-	printf("%d\n",val);
-	printf("%d\n",checksum_is_valid(ce,val));
-	return 0;
-	
-}
