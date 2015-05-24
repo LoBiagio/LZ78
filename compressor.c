@@ -6,7 +6,7 @@
 #include "htable.h"
 #include "bitio.h"
 #include <math.h>
-#define DICT_SIZE 10000
+#define DICT_SIZE 1000
 
 int main() {
     int fd_r;
@@ -29,10 +29,10 @@ int main() {
             else {
             	bitio_write(fd_w, (uint64_t *)&father, htable_index_bits(dictionary));
             }
-		    //printf("value:%c\n", c);
-		  	//printf("father:%u\n",father);
-		 	//printf("elements%u\n",htable_nmemb(dictionary)+255);
-			//printf("bit:%d\n",htable_index_bits(dictionary));
+		   // printf("value:%c\n", c);
+		  //	printf("father:%u\n",father);
+		 //	printf("elements%u\n",htable_nmemb(dictionary)+255);
+		//	printf("bit:%d\n",htable_index_bits(dictionary));
         }
         father = new_father;
         

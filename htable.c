@@ -98,7 +98,7 @@ int htable_insert(TABLE *table, unsigned char value, unsigned int father, unsign
     // Table is full
     if (table->nmemb == table->dim-1) {
         htable_clear(table);
-        printf("DIZIONARIO AZZERATO\n");
+       // printf("DIZIONARIO AZZERATO\n");
         *reset = 1;
     }
     // Insert value

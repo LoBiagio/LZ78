@@ -8,7 +8,7 @@
 #include <errno.h>
 #include <string.h>
 #include <math.h>
-#define DICT_SIZE 10000
+#define DICT_SIZE 1000
 typedef struct
 {
 	unsigned int father;
@@ -43,7 +43,7 @@ void
 array_reset (struct darray *da){
 	memset(da->dictionary, 0, sizeof(DENTITY)*da->dim);
 	da->nmemb = 0;
-	printf("DICTIONARY RESET\n");
+	//printf("DICTIONARY RESET\n");
 }
 /*
  * Returns the number of entries currently in the dictionary
@@ -53,9 +53,9 @@ insert (struct darray *da, unsigned int father, unsigned char value)
 {
 	if(father > 0){
 		
-		if (da->nmemb == da->dim-1){
-			array_reset(da);
-		}
+	//	if (da->nmemb == da->dim-1){
+	//		array_reset(da);
+	//	}
 		da->dictionary[da->nmemb].father = father;
 		da->dictionary[da->nmemb].value = value;
 		da->nmemb++;
@@ -111,23 +111,29 @@ int main() {
 		perror("error on array_new");
 	}
 	buf = calloc(DICT_SIZE, sizeof(unsigned char));
-	while( (ret = bitio_read (fd_r, &tmp, da->nmemb==da->dim-1?9:((int)log2(da->nmemb + 257)+1 )) > 0 )){
+	while( (ret = bitio_read (fd_r, &tmp, da->nmemb==da->dim-1?(int)log2(256)+1:((int)log2(da->nmemb + 257)+1 )) > 0 )){
 		if((unsigned int)tmp == 0){
 			break;
 		}
+		//printf("%u\n",get_size(da)+256);
+		if (da->nmemb == da->dim-1){
+			array_reset(da);
+		}	
 		if(tmp == (uint64_t)get_size(da)+256) {
+			//printf("SEI ENTRATO QUI\n");
 			insert(da,father,old_value);
-			//printf("insert node %u of value %c in fahter %u\n",da->nmemb+256,old_value,father);
+			//printf("insert node %u of value %c in father %u\n",da->nmemb+256-1,old_value,father);
+			//printf("explore darray with tmp:%u, old_value:%c\n",(unsigned int)tmp,old_value);
 			buf_len = explore_darray(da, (unsigned int)tmp,buf,&old_value);
-			printf("SEI ENTRATO QUI\n");
+			
 		}
 		else{
 		//	printf("number of bits:%d\n",da->nmemb==da->dim-1?9:((int)log2(da->nmemb + 257)+1));
-		//	printf("explore_darray execution with tmp:%u\n",(unsigned int)tmp);
+			//printf("explore_darray execution with tmp:%u\n",(unsigned int)tmp);
 			buf_len = explore_darray(da, (unsigned int)tmp, buf, &old_value);
-		//	printf("explore_darray completed, value:%c\n",old_value);
+			//printf("explore_darray completed, value:%c\n",old_value);
 			insert(da, father, old_value);
-		//	printf("insert node %u of value %c in fahter %u\n",da->nmemb+256-1,old_value,father);
+			//printf("insert node %u of value %c in fahter %u\n",da->nmemb+256-1,old_value,father);
 			//printf("number of bits:%d\n",(int)log2(da->nmemb + 256)+1);
 		}
 	//	printf("father: %d\n",father);
