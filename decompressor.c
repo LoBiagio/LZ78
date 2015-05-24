@@ -8,7 +8,7 @@
 #include <errno.h>
 #include <string.h>
 #include <math.h>
-#define DICT_SIZE 10000
+#define DICT_SIZE 2
 
 typedef struct
 {
@@ -36,7 +36,6 @@ array_new(unsigned int size)
 		return NULL;
 	}
 	memset(tmp->dictionary,0,DICT_SIZE * sizeof(DENTITY));
-	//tmp->nmemb = -1;
 	tmp->nmemb = 0;
 	tmp->dim = size;
 	return tmp;		
@@ -45,26 +44,6 @@ void
 array_reset (struct darray *da){
 	memset(da->dictionary, 0, sizeof(DENTITY)*da->dim);
 	da->nmemb = 0;
-}
-/*
- * Returns the number of entries currently in the dictionary
- */
-int
-insert (struct darray *da, unsigned int father, unsigned char value)
-{
-	if(father > 0){		
-		
-		da->dictionary[da->nmemb].father = father;
-		da->dictionary[da->nmemb].value = value;
-		da->nmemb++;
-		if (da->nmemb >= da->dim){
-			array_reset(da);
-			printf("Dizionario azzerato\n");
-			fflush(0);
-		}		
-	}
-	//da->nmemb++;
-	return da->nmemb;
 }
 
 unsigned int
@@ -134,8 +113,6 @@ explore_and_insert(struct darray* da, unsigned int father, unsigned int *index, 
 		if (da->nmemb >= da->dim) {
 			array_reset(da);	//after dictionary reset, father must be reset!
 			*index = (unsigned int)0;
-			printf("Dizionario azzerato\n");
-			fflush(0);
 		}
 		
 		return buf_len;
@@ -153,8 +130,6 @@ explore_and_insert(struct darray* da, unsigned int father, unsigned int *index, 
 	if (da->nmemb >= da->dim) {
 		array_reset(da);	//after dictionary reset, father must be reset!
 		*index = (unsigned int)0;
-		printf("Dizionario azzerato\n");
-		fflush(0);
 	}
 	
 	return buf_len;		
@@ -175,13 +150,7 @@ int main() {
 		perror("error on array_new");
 	}
 	buf = calloc(DICT_SIZE + 1, sizeof(unsigned char));	//TODO check buf size
-	printf("START\n");
-	fflush(0);
 	while( (ret = bitio_read (fd_r, &tmp, (int)(log2(da->nmemb + 257)+1)) > 0 )){
-	//while( (ret = bitio_read (fd_r, &tmp, 9) > 0 )){
-		//printf("letti %d bits\n", 9);
-		printf("Letto %u\n", (unsigned int)tmp);
-		fflush(0);
 		if((unsigned int)tmp == 0){
 			break;
 		}
@@ -189,18 +158,11 @@ int main() {
 		//Here happens the magic...
 		buf_len = explore_and_insert(da, father, (unsigned int *)&tmp, &old_value, buf);
 		
-		//printf("letti %d bits\n", ret);
-		//printf("father: %d\n",father);
-		//printf("value: %c\n\n",old_value);
-	//	old_father = father;
 		father = (unsigned int)tmp;
-		//printf ("new_father: %d\n",father);
 		
 		write(fd_w, &buf[da->dim + 1 - buf_len], buf_len);	//TODO check buf size
-		//write(0, &buf[da->dim - buf_len], buf_len);
-		//printf("\n");
+
 	}
-//	write(fd_w, &oldvalue, 1);
 	bitio_close(fd_r);
 	close(fd_w);
 	return 0;	 
