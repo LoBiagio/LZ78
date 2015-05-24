@@ -5,7 +5,7 @@
 #include <fcntl.h>
 #include "htable.h"
 #include "bitio.h"
-#define DICT_SIZE 2
+#define DICT_SIZE 10000
 
 int main() {
     int fd_r;

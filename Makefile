@@ -3,6 +3,8 @@ CC=gcc
 CFLAGS=-g -c
 LFLAGS=-lm
 
+.PHONY: clean
+
 all: lz78
 
 lz78: lz78.o compressor.o decompressor.o htable.o bitio.o
@@ -30,4 +32,7 @@ htable.o: htable.c
 	$(CC) $(CFLAGS) $? -o $@
 
 clean:
-	rm -fr *.o; if [ -e B_NEW ] ; then rm B_NEW ; fi; if [ -e compressed ] ; then rm compressed ; fi
+	rm -fr *.o; \
+       if [ -e B_NEW ] ; then rm B_NEW ; fi ; \
+       if [ -e compressed ] ; then rm compressed ; fi
+
