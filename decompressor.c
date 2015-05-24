@@ -53,9 +53,6 @@ insert (struct darray *da, unsigned int father, unsigned char value)
 {
 	if(father > 0){
 		
-	//	if (da->nmemb == da->dim-1){
-	//		array_reset(da);
-	//	}
 		da->dictionary[da->nmemb].father = father;
 		da->dictionary[da->nmemb].value = value;
 		da->nmemb++;
@@ -116,7 +113,7 @@ int main() {
 			break;
 		}
 		//printf("%u\n",get_size(da)+256);
-		if (da->nmemb == da->dim-1){
+		if (get_size(da) == DICT_SIZE-1){
 			array_reset(da);
 		}	
 		if(tmp == (uint64_t)get_size(da)+256) {
