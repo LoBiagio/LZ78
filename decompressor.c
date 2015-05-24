@@ -31,11 +31,11 @@ array_new(unsigned int size)
 	if (tmp == NULL){
 		return NULL;
 	}
-	tmp->dictionary = calloc(DICT_SIZE,sizeof(DENTITY));
+	tmp->dictionary = calloc(size,sizeof(DENTITY));
 	if (tmp->dictionary == NULL){
 		return NULL;
 	}
-	memset(tmp->dictionary,0,DICT_SIZE * sizeof(DENTITY));
+	memset(tmp->dictionary,0,size * sizeof(DENTITY));
 	tmp->nmemb = 0;
 	tmp->dim = size;
 	return tmp;		
@@ -135,7 +135,9 @@ explore_and_insert(struct darray* da, unsigned int father, unsigned int *index, 
 	return buf_len;		
 }
 
-int main() {
+int
+decompress(const char *input_file_name, const char *output_file_name, unsigned int dictionary_size)
+{
 	int fd_w;
 	int ret;
 	uint64_t tmp;
@@ -144,12 +146,12 @@ int main() {
 	struct darray *da;
 	unsigned char *buf;
 	unsigned int father = 0, buf_len;
-	fd_r = bitio_open ("compressed", 'r');
-	fd_w = open ("B_NEW", (O_CREAT | O_TRUNC | O_WRONLY) , 0666);
-	if( (da = array_new(DICT_SIZE)) == NULL){
+	fd_r = bitio_open (input_file_name, 'r');
+	fd_w = open (output_file_name, (O_CREAT | O_TRUNC | O_WRONLY) , 0666);
+	if( (da = array_new(dictionary_size)) == NULL){
 		perror("error on array_new");
 	}
-	buf = calloc(DICT_SIZE + 1, sizeof(unsigned char));	//TODO check buf size
+	buf = calloc(dictionary_size + 1, sizeof(unsigned char));	//TODO check buf size
 	while( (ret = bitio_read (fd_r, &tmp, (int)(log2(da->nmemb + 257)+1)) > 0 )){
 		if((unsigned int)tmp == 0){
 			break;
@@ -165,6 +167,14 @@ int main() {
 	}
 	bitio_close(fd_r);
 	close(fd_w);
-	return 0;	 
+	return 1;
 }
 
+int main() {
+	int ret = decompress("compressed", "B_NEW", DICT_SIZE);
+	if (ret) {
+		return 0;
+	} else {
+		return 1;
+	}
+}
