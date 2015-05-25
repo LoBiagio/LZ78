@@ -99,8 +99,11 @@ int htable_insert(TABLE *table, unsigned char value, unsigned int father, unsign
     // Table is full
     if (table->nmemb == table->dim) {
         htable_clear(table);
-        //printf("Dizionario azzerato\n");
+        // No insertion is performed: the node with father 0 is already in the dictionary
+        // new_father conresponds to the value of the node that has (not) just been insterted
         *new_father = (unsigned int)value;
+        // An insertion would have been performed if table wasn't full, so 1 is returned
+        // and the father is passed to decompressor once this function ends
         return 1;
     }
 
@@ -114,6 +117,8 @@ int htable_insert(TABLE *table, unsigned char value, unsigned int father, unsign
 }
 
 int htable_index_bits(TABLE *table) {
+    // Once the dictionary is cleared the index of the father is sent to the decompressor
+    // That index is on the same bit length of table->dim
     return table->nmemb == 0 ? (int)ceil(log2(table->dim + 256)) : (int)ceil(log2(table->nmemb + 256));
 }
 

@@ -9,7 +9,6 @@
 #include <sys/types.h>
 #include "htable.h"
 #include "bitio.h"
-
 #define DICT_SIZE 2
 
 int write_header(int fd_r, struct bitio *fd_w, char *filename, int dict_size) {
@@ -81,6 +80,7 @@ int main() {
         exit(1);
     }
     dictionary = htable_new(dict_size);
+
 /*
     if (write_header(fd_r, fd_w, filename, dict_size) < 0) {
         close(fd_r);
@@ -91,13 +91,24 @@ int main() {
 */
     while((ret = read(fd_r, &c, sizeof(char))) > 0) {
         if (htable_insert(dictionary, c, father, &new_father) == 1) {
-            bitio_write(fd_w, (uint64_t *)&father, htable_index_bits(dictionary));
+            i = htable_index_bits(dictionary);
+            r = bitio_write(fd_w, (uint64_t *)&father, i);
+            if (r != i) {
+                printf("Error writing the compressed file\n");
+                goto end;
+            }
         }
         father = new_father;
+    }
+    if (ret < 0) {
+        printf("Error reading file to compress\n");
+        goto end;
     }
     bitio_write(fd_w, (uint64_t *)&father, htable_index_bits(dictionary));
     father = 0;
     bitio_write(fd_w, (uint64_t *)&father, htable_index_bits(dictionary));
+
+    htable_destroy(dictionary);
     close(fd_r);
     bitio_close(fd_w);
     return 0;

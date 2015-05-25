@@ -169,6 +169,65 @@ decompress(const char *input_file_name, const char *output_file_name, unsigned i
 	return 1;
 }
 
+int read_header(struct bitio *fd, int *dict_size) {
+    int ret, i;
+    char *string;
+    uint64_t buf, tmp;
+    // File name length
+    ret = bitio_read(fd, &buf, 8);
+    if (ret != 8) {
+        printf("Error reading file name length\n");
+        return -1;
+    }
+
+    string = (char *)malloc(buf + 1);
+    if (string == NULL) {
+        printf("Error allocating memory for file name\n");
+        return -1;
+    }
+    // File name
+    string[buf] = '\0';
+    for (i = 0; i < buf; i++) {
+        ret = bitio_read(fd, &tmp, 8);
+        if (ret != 8) {
+            printf("Error reading file name\n");
+            free(string);
+            return -1;
+        }
+        string[i] = (char)tmp;
+    }
+    printf("Original file name: %s\n", string);
+    free(string);
+    // File size
+    ret = bitio_read(fd, &buf, 64);
+    if (ret != 64) {
+            printf("Error reading file size\n");
+            return -1;
+        }
+    buf = le64toh(buf);
+    printf("Original file size: %lu bytes\n", (long unsigned int)buf);
+    // Last modification
+    ret = bitio_read(fd, &buf, 64);
+    if (ret != 64) {
+            printf("Error reading file's last modification\n");
+            return -1;
+        }
+    buf = le64toh(buf);
+    printf("Last modification: %d\n", ctime((time_t *)&buf));
+    // File checksum
+    // TODO
+
+    // Dictionary length
+    ret = bitio_read(fd, &buf, 32);
+    if (ret != 32) {
+        printf("Error reading dictionary length\n");
+        return -1;
+    }
+    buf = le32toh(buf);
+    *dict_size = buf;
+    return 0;
+}
+
 int main() {
 	int ret = decompress("compressed", "B_NEW", DICT_SIZE);
 	if (ret) {
