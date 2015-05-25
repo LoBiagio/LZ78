@@ -8,7 +8,7 @@
 #include <errno.h>
 #include <string.h>
 #include <math.h>
-#define DICT_SIZE 1000
+#define DICT_SIZE 3
 typedef struct
 {
 	unsigned int father;
@@ -115,6 +115,7 @@ int main() {
 		//printf("%u\n",get_size(da)+256);
 		if (get_size(da) == DICT_SIZE-1){
 			array_reset(da);
+			//father = (tmp == (uint64_t)get_size(da)+256)?(unsigned char)tmp:father;
 		}	
 		if(tmp == (uint64_t)get_size(da)+256) {
 			//printf("SEI ENTRATO QUI\n");

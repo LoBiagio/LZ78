@@ -6,7 +6,7 @@
 #include "htable.h"
 #include "bitio.h"
 #include <math.h>
-#define DICT_SIZE 1000
+#define DICT_SIZE 3
 
 int main() {
     int fd_r;
