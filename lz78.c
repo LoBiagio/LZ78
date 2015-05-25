@@ -29,6 +29,7 @@ int main() {
         exit(1);
       }
     decompress(fd,fd_bitio,dict_size);
+   
     
 /*
     if (write_header(fd_r, fd_w, filename, dict_size) < 0) {
