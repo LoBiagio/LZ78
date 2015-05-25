@@ -3,7 +3,6 @@
 #include <stdio.h>
 #include <stdint.h>
 #include <fcntl.h>
-#include "htable.h"
 #include "bitio.h"
 #include <errno.h>
 #include <string.h>
@@ -135,18 +134,14 @@ explore_and_insert(struct darray* da, unsigned int father, unsigned int *index, 
 }
 
 int
-decompress(const char *input_file_name, const char *output_file_name, unsigned int dictionary_size)
+decompress(int fd_w, struct bitio* fd_r, unsigned int dictionary_size)
 {
-	int fd_w;
 	int ret;
 	uint64_t tmp;
 	unsigned char old_value;
-	struct bitio *fd_r;
 	struct darray *da;
 	unsigned char *buf;
 	unsigned int father = 0, buf_len;
-	fd_r = bitio_open (input_file_name, 'r');
-	fd_w = open (output_file_name, (O_CREAT | O_TRUNC | O_WRONLY) , 0666);
 	if( (da = array_new(dictionary_size)) == NULL){
 		perror("error on array_new");
 	}
@@ -167,13 +162,4 @@ decompress(const char *input_file_name, const char *output_file_name, unsigned i
 	bitio_close(fd_r);
 	close(fd_w);
 	return 1;
-}
-
-int main() {
-	int ret = decompress("compressed", "B_NEW", DICT_SIZE);
-	if (ret) {
-		return 0;
-	} else {
-		return 1;
-	}
 }
