@@ -5,10 +5,12 @@
 #include <unistd.h>
 
 #define DICT_SIZE 1000
+<<<<<<< HEAD
 int compress(int,struct bitio*,unsigned int,int);
 int decompress(int,struct bitio*,unsigned int,int);
 int write_header(int, struct bitio*,char *,unsigned int);
 int read_header(struct bitio*,unsigned int *);
+
 int main(int argc, char *argv []) {
     int fd, index, d_v = 0, c_v = 0;
     char *c_source, *c_dest = "compressed", *d_source = "compressed", *d_dest = "NEWFILE";
@@ -64,7 +66,7 @@ int main(int argc, char *argv []) {
 	    		close(fd);
 	    		exit(1);
 			}
-			//write_header(fd,fd_bitio,c_source,dict_size);
+			write_header(fd,fd_bitio,c_source,dict_size);
 			printf("Compressing...\n");
 			compress(fd,fd_bitio,dict_size,c_v);
 			printf("Compress completed\n");
@@ -110,7 +112,7 @@ int main(int argc, char *argv []) {
         	close(fd);
         	exit(1);
       		}
-      		//read_header(fd_bitio,&d_dict_size);
+      		read_header(fd_bitio,&d_dict_size);
       		printf("Decompressing...\n");
     		decompress(fd,fd_bitio,d_dict_size,d_v);
     		printf("Decompress completed\n");
@@ -130,14 +132,7 @@ int main(int argc, char *argv []) {
     	printf ("Non-option argument %s\n", argv[index]);   
     }*/
 
-   /* if (write_header(fd_r, fd_w, filename, dict_size) < 0) {
-        close(fd_r);
-        bitio_close(fd_w);
-        htable_destroy(dictionary);
-        exit(1);
-    }*/
-  
-    return 0;
+      return 0;
 end:
  //   close(fd);
  //   bitio_close(fd_bitio);

@@ -7,6 +7,8 @@
 #include <errno.h>
 #include <string.h>
 #include <math.h>
+#include "checksum.h"
+#include <time.h>
 #define DICT_SIZE 2
 typedef struct
 {
@@ -142,6 +144,7 @@ decompress(int fd_w, struct bitio* fd_r, unsigned int dictionary_size, int v)
 	struct darray *da;
 	unsigned char *buf;
 	unsigned int father = 0, buf_len;
+	CHECKENV *cs = checksum_init();
 	if( (da = array_new(dictionary_size)) == NULL){
 		perror("error on array_new");
 	}
@@ -150,8 +153,7 @@ decompress(int fd_w, struct bitio* fd_r, unsigned int dictionary_size, int v)
 	printf("Buffer allocation\n");
 	}
 	buf = calloc(dictionary_size + 1, sizeof(unsigned char));	//TODO check buf size
-	
-	while( (ret = bitio_read (fd_r, &tmp, (int)(log2(da->nmemb + 257)+1)) > 0 )){
+	while( (ret = bitio_read(fd_r, &tmp, (int)(log2(da->nmemb + 257)+1)) > 0 )){ //TODO controlla ret!
 		if((unsigned int)tmp == 0){
 			break;
 		}
@@ -169,23 +171,37 @@ decompress(int fd_w, struct bitio* fd_r, unsigned int dictionary_size, int v)
 		write(0, &buf[da->dim + 1 - buf_len], buf_len);
 		printf("\n");
 		}
+		checksum_update(cs, (char *)&buf[da->dim + 1 - buf_len], buf_len);
+
 	}
+	tmp = 0;
+	ret = bitio_read(fd_r, &tmp, 32); //TODO controlla ret
+	ret = le32toh((int)tmp);
+	if (ret != checksum_final(cs)) {
+		printf("Errore checksum\n");
+		return 1;
+	}
+	printf("File checksum matches\n");
+	checksum_destroy(cs);
 	bitio_close(fd_r);
 	close(fd_w);
 	return 1;
 }
 
-int read_header(struct bitio *fd, unsigned int *dict_size) {
-    int ret, i;
+int read_header(struct bitio *fd, unsigned int *dict_size) 
+{
+   int ret, i;
     char *string;
     uint64_t buf, tmp;
+    CHECKENV *cs = checksum_init();
+    
     // File name length
     ret = bitio_read(fd, &buf, 8);
     if (ret != 8) {
         printf("Error reading file name length\n");
         return -1;
     }
-
+    checksum_update(cs, (char *)&buf, 1);
     string = (char *)malloc(buf + 1);
     if (string == NULL) {
         printf("Error allocating memory for file name\n");
@@ -201,27 +217,28 @@ int read_header(struct bitio *fd, unsigned int *dict_size) {
             return -1;
         }
         string[i] = (char)tmp;
+        checksum_update(cs, (char *)&buf, 1);
     }
     printf("Original file name: %s\n", string);
     free(string);
     // File size
     ret = bitio_read(fd, &buf, 64);
     if (ret != 64) {
-            printf("Error reading file size\n");
-            return -1;
-        }
+        printf("Error reading file size\n");
+        return -1;
+    }
+    checksum_update(cs, (char *)&buf, 8);
     buf = le64toh(buf);
     printf("Original file size: %lu bytes\n", (long unsigned int)buf);
     // Last modification
     ret = bitio_read(fd, &buf, 64);
     if (ret != 64) {
-            printf("Error reading file's last modification\n");
-            return -1;
-        }
+        printf("Error reading file's last modification\n");
+        return -1;
+    }
+    checksum_update(cs, (char *)&buf, 8);
     buf = le64toh(buf);
-    printf("Last modification: %d\n", ctime((time_t *)&buf));
-    // File checksum
-    // TODO
+    printf("Last modification: %s\n", ctime((time_t *)&buf));
 
     // Dictionary length
     ret = bitio_read(fd, &buf, 32);
@@ -229,7 +246,20 @@ int read_header(struct bitio *fd, unsigned int *dict_size) {
         printf("Error reading dictionary length\n");
         return -1;
     }
+    checksum_update(cs, (char *)&buf, 4);
     buf = le32toh(buf);
     *dict_size = buf;
+    // Header checksum
+    ret = bitio_read(fd, &buf, 32);
+    if (ret != 32) {
+        printf("Error reading header checksum\n");
+        return -1;
+    }
+    buf = le32toh(buf);
+    if ((unsigned int)buf != checksum_final(cs)) {
+    	printf("Error: header checksum mismatch\n");
+    	return -1;
+    }
+    printf("Header checksum matches\n");
     return 0;
 }

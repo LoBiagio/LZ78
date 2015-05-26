@@ -8,7 +8,7 @@ LFLAGS=-lm
 
 all: lz78
 
-lz78: lz78.o compressor.o decompressor.o htable.o bitio.o
+lz78: lz78.o compressor.o decompressor.o htable.o bitio.o checksum.o
 	$(CC) $^ -o $@ $(LFLAGS)
 
 lz78.o: lz78.c
@@ -20,12 +20,15 @@ compressor: compressor.o htable.o bitio.o
 decompressor: decompressor.o bitio.o
 	$(CC) $^ -o $@ $(LFLAGS)
 
-compressor.o: compressor.c htable.h bitio.h
+compressor.o: compressor.c htable.h bitio.h checksum.h
 	$(CC) $(CFLAGS) $< -o $@
 
-decompressor.o: decompressor.c bitio.h
+decompressor.o: decompressor.c bitio.h checksum.h
 	$(CC) $(CFLAGS) $< -o $@
 
+checksum.o: checksum.c
+	$(CC) $(CFLAGS) $? -o $@
+	
 bitio.o: bitio.c
 	$(CC) $(CFLAGS) $? -o $@
 
