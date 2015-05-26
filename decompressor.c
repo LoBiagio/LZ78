@@ -9,7 +9,6 @@
 #include <math.h>
 #include "checksum.h"
 #include <time.h>
-#define DICT_SIZE 2
 typedef struct
 {
 	unsigned int father;

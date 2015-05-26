@@ -5,7 +5,6 @@
 #include <unistd.h>
 
 #define DICT_SIZE 1000
-<<<<<<< HEAD
 int compress(int,struct bitio*,unsigned int,int);
 int decompress(int,struct bitio*,unsigned int,int);
 int write_header(int, struct bitio*,char *,unsigned int);

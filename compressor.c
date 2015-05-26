@@ -10,7 +10,6 @@
 #include "htable.h"
 #include "bitio.h"
 #include "checksum.h"
-#define DICT_SIZE 10000
 
 int write_header(int fd_r, struct bitio *fd_w, char *filename, unsigned int dict_size) {
     int ret, i, size;
