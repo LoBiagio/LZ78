@@ -216,7 +216,7 @@ int read_header(struct bitio *fd, unsigned int *dict_size)
             return -1;
         }
         string[i] = (char)tmp;
-        checksum_update(cs, (char *)&buf, 1);
+        checksum_update(cs, (char *)&tmp, 1);
     }
     printf("Original file name: %s\n", string);
     free(string);
