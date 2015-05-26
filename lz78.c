@@ -47,7 +47,8 @@ int main(int argc, char *argv []) {
     				printf("try -h for help\n");
     				goto end;
     			}
-    		}	
+    		}
+    		if(argc > 2){	
 			if ((fd = open(c_source, O_RDONLY)) < 0) {
 	    	perror("Error opening file in read mode: ");
 	    	exit(1);
@@ -58,6 +59,7 @@ int main(int argc, char *argv []) {
 	    		exit(1);
 			}
 			compress(fd,fd_bitio,dict_size);
+			}
 			break;
 			case 'd':
 			while((opt = getopt(argc,argv,"hi:o:")) != -1){
