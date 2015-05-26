@@ -11,71 +11,72 @@
 #include <time.h>
 typedef struct
 {
-	unsigned int father;
-	unsigned char value;
+    unsigned int father;
+    unsigned char value;
 }DENTITY;
 
 struct darray
 {
-	DENTITY* dictionary;
- 	unsigned int nmemb;
- 	unsigned int dim;
+    DENTITY* dictionary;
+     unsigned int nmemb;
+     unsigned int dim;
 };
 
 struct darray *
 array_new(unsigned int size)
 {
-	struct darray* tmp;
-	tmp=calloc(1,sizeof(struct darray));
-	if (tmp == NULL){
-		return NULL;
-	}
-	tmp->dictionary = calloc(size,sizeof(DENTITY));
-	if (tmp->dictionary == NULL){
-		return NULL;
-	}
-	memset(tmp->dictionary,0,size * sizeof(DENTITY));
-	tmp->nmemb = 0;
-	tmp->dim = size;
-	return tmp;		
+    struct darray* tmp;
+    tmp=calloc(1,sizeof(struct darray));
+    if (tmp == NULL){
+        return NULL;
+    }
+    tmp->dictionary = calloc(size,sizeof(DENTITY));
+    if (tmp->dictionary == NULL){
+        return NULL;
+    }
+    memset(tmp->dictionary,0,size * sizeof(DENTITY));
+    tmp->nmemb = 0;
+    tmp->dim = size;
+    return tmp;        
 }
+
 void
 array_reset (struct darray *da){
-	memset(da->dictionary, 0, sizeof(DENTITY)*da->dim);
-	da->nmemb = 0;
+    memset(da->dictionary, 0, sizeof(DENTITY)*da->dim);
+    da->nmemb = 0;
 }
 
 unsigned int
 get_size (struct darray* da)
 {
-	return da->nmemb;
+    return da->nmemb;
 }
 //explore the tree from bottom to top and rfill the buffer with the read characters, returns the number of characters in the buffer
 //in value there is the missing character of the previous call
 unsigned int
 explore_darray (struct darray *da, unsigned int index, char *buf, unsigned char *value)
 {
-	unsigned int offset; //counter from the bottom of the buffer (same size as the dictionary)
-	if ( (da == NULL) || (buf == NULL) ){
-		errno = EINVAL;
-		return -1;
-	}
-	offset = da->dim;	//TODO check buf size 
-	if ( index < 256 ){ //we are already at the first level of the tree
-		*value = (unsigned char)index;
-		buf[offset] = (unsigned char)index;
-		return 1;
-	}
-	
-	while (da->dictionary[index-256].father >= 256){ //explore the tree
-		buf[offset] = da->dictionary[index-256].value;
-		offset--;
-		index = da->dictionary[index-256].father;
-	}
-	buf[offset] = da->dictionary[index-256].value;
-	buf[--offset] = (unsigned char)da->dictionary[index-256].father;
-	*value = (unsigned char)da->dictionary[index-256].father;
-	return da->dim + 1- offset;	//TODO check buf size
+    unsigned int offset; //counter from the bottom of the buffer (same size as the dictionary)
+    if ( (da == NULL) || (buf == NULL) ){
+        errno = EINVAL;
+        return -1;
+    }
+    offset = da->dim;    //TODO check buf size 
+    if ( index < 256 ){ //we are already at the first level of the tree
+        *value = (unsigned char)index;
+        buf[offset] = (unsigned char)index;
+        return 1;
+    }
+    
+    while (da->dictionary[index-256].father >= 256){ //explore the tree
+        buf[offset] = da->dictionary[index-256].value;
+        offset--;
+        index = da->dictionary[index-256].father;
+    }
+    buf[offset] = da->dictionary[index-256].value;
+    buf[--offset] = (unsigned char)da->dictionary[index-256].father;
+    *value = (unsigned char)da->dictionary[index-256].father;
+    return da->dim + 1- offset;    //TODO check buf size
 }
 
 /*
@@ -89,107 +90,107 @@ explore_darray (struct darray *da, unsigned int index, char *buf, unsigned char 
 int
 explore_and_insert(struct darray* da, unsigned int father, unsigned int *index, unsigned char* old_value, unsigned char* buf)
 {
-	unsigned int buf_len;
-	
-	if (father == 0) { //only first label received. Value to be added is unknow, so we don't perform an insert.
-		
-		//exploring
-		buf_len = explore_darray(da, *index, buf, old_value);
-		return buf_len;
-	}
-	
-	if (*index == get_size(da) + 256) { //The 'recursion' case
-		
-		//adding
-		da->dictionary[da->nmemb].father = father;
-		da->dictionary[da->nmemb].value = (unsigned int)*old_value;
-		da->nmemb++;
-		
-		//exploring
-		buf_len = explore_darray(da, *index, buf, old_value);
-		
-		//there may be the need for a dictionary reset
-		if (da->nmemb >= da->dim) {
-			array_reset(da);	//after dictionary reset, father must be reset!
-			*index = (unsigned int)0;
-		}
-		
-		return buf_len;
-	}
-	
-	//exploring
-	buf_len = explore_darray(da, *index, buf, old_value);
-	
-	//adding
-	da->dictionary[da->nmemb].father = father;
-	da->dictionary[da->nmemb].value = (unsigned int)*old_value;
-	da->nmemb++;
-	
-	//there may be the need for a dictionary reset
-	if (da->nmemb >= da->dim) {
-		array_reset(da);	//after dictionary reset, father must be reset!
-		*index = (unsigned int)0;
-	}
-	
-	return buf_len;		
+    unsigned int buf_len;
+    
+    if (father == 0) { //only first label received. Value to be added is unknow, so we don't perform an insert.
+
+        //exploring
+        buf_len = explore_darray(da, *index, buf, old_value);
+        return buf_len;
+    }
+    
+    if (*index == get_size(da) + 256) { //The 'recursion' case
+        
+        //adding
+        da->dictionary[da->nmemb].father = father;
+        da->dictionary[da->nmemb].value = (unsigned int)*old_value;
+        da->nmemb++;
+        
+        //exploring
+        buf_len = explore_darray(da, *index, buf, old_value);
+        
+        //there may be the need for a dictionary reset
+        if (da->nmemb >= da->dim) {
+            array_reset(da);    //after dictionary reset, father must be reset!
+            *index = (unsigned int)0;
+        }
+        
+        return buf_len;
+    }
+    
+    //exploring
+    buf_len = explore_darray(da, *index, buf, old_value);
+    
+    //adding
+    da->dictionary[da->nmemb].father = father;
+    da->dictionary[da->nmemb].value = (unsigned int)*old_value;
+    da->nmemb++;
+    
+    //there may be the need for a dictionary reset
+    if (da->nmemb >= da->dim) {
+        array_reset(da);    //after dictionary reset, father must be reset!
+        *index = (unsigned int)0;
+    }
+    
+    return buf_len;        
 }
 
 int
 decompress(int fd_w, struct bitio* fd_r, unsigned int dictionary_size, int v)
 {
-	int ret;
-	uint64_t tmp;
-	unsigned char old_value;
-	struct darray *da;
-	unsigned char *buf;
-	unsigned int father = 0, buf_len;
-	CHECKENV *cs = checksum_init();
-	if( (da = array_new(dictionary_size)) == NULL){
-		perror("error on array_new");
-	}
-	if(v == 1){
-	printf("A new array initialized\n");
-	printf("Buffer allocation\n");
-	}
-	buf = calloc(dictionary_size + 1, sizeof(unsigned char));	//TODO check buf size
-	while( (ret = bitio_read(fd_r, &tmp, (int)(log2(da->nmemb + 257)+1)) > 0 )){ //TODO controlla ret!
-		if((unsigned int)tmp == 0){
-			break;
-		}
-		if (v == 1){
-		printf("Number of bits read:%d\n",(int)log2(da->nmemb + 257)+1);
-		}
-		//Here happens the magic...
-		buf_len = explore_and_insert(da, father, (unsigned int *)&tmp, &old_value, buf);
-		if (v == 1){
-		printf("Explore and insert completed. Father:%u, value read:%d, new value to add:%c\n",father,(int)tmp,old_value);
-		}
-		father = (unsigned int)tmp;
-		write(fd_w, &buf[da->dim + 1 - buf_len], buf_len);	//TODO check buf size
-		if (v == 1){
-		write(0, &buf[da->dim + 1 - buf_len], buf_len);
-		printf("\n");
-		}
-		checksum_update(cs, (char *)&buf[da->dim + 1 - buf_len], buf_len);
+    int ret;
+    uint64_t tmp;
+    unsigned char old_value;
+    struct darray *da;
+    unsigned char *buf;
+    unsigned int father = 0, buf_len;
+    CHECKENV *cs = checksum_init();
+    if( (da = array_new(dictionary_size)) == NULL){
+        perror("error on array_new");
+    }
+    if(v == 1){
+    printf("A new array initialized\n");
+    printf("Buffer allocation\n");
+    }
+    buf = calloc(dictionary_size + 1, sizeof(unsigned char));    //TODO check buf size
+    while( (ret = bitio_read(fd_r, &tmp, (int)(log2(da->nmemb + 257)+1)) > 0 )){ //TODO controlla ret!
+        if((unsigned int)tmp == 0){
+            break;
+        }
+        if (v == 1){
+            printf("Number of bits read:%d\n",(int)log2(da->nmemb + 257)+1);
+        }
+        //Here happens the magic...
+        buf_len = explore_and_insert(da, father, (unsigned int *)&tmp, &old_value, buf);
+        if (v == 1){
+            printf("Explore and insert completed. Father:%u, value read:%d, new value to add:%c\n",father,(int)tmp,old_value);
+        }
+        father = (unsigned int)tmp;
+        write(fd_w, &buf[da->dim + 1 - buf_len], buf_len);    //TODO check buf size
+        if (v == 1){
+            write(0, &buf[da->dim + 1 - buf_len], buf_len);
+            printf("\n");
+        }
+        checksum_update(cs, (char *)&buf[da->dim + 1 - buf_len], buf_len);
 
-	}
-	tmp = 0;
-	ret = bitio_read(fd_r, &tmp, 32); //TODO controlla ret
-	ret = le32toh((int)tmp);
-	if (ret != checksum_final(cs)) {
-		printf("Errore checksum\n");
-		return 1;
-	}
-	printf("File checksum matches\n");
-	checksum_destroy(cs);
-	bitio_close(fd_r);
-	close(fd_w);
-	return 1;
+    }
+    tmp = 0;
+    ret = bitio_read(fd_r, &tmp, 32); //TODO controlla ret
+    ret = le32toh((int)tmp);
+    if (ret != checksum_final(cs)) {
+        printf("Errore checksum\n");
+        return 1;
+    }
+    printf("File checksum matches\n");
+    checksum_destroy(cs);
+    bitio_close(fd_r);
+    close(fd_w);
+    return 1;
 }
 
 int read_header(struct bitio *fd, unsigned int *dict_size) 
 {
-   int ret, i;
+    int ret, i;
     char *string;
     uint64_t buf, tmp;
     CHECKENV *cs = checksum_init();
@@ -256,8 +257,8 @@ int read_header(struct bitio *fd, unsigned int *dict_size)
     }
     buf = le32toh(buf);
     if ((unsigned int)buf != checksum_final(cs)) {
-    	printf("Error: header checksum mismatch\n");
-    	return -1;
+        printf("Error: header checksum mismatch\n");
+        return -1;
     }
     printf("Header checksum matches\n");
     return 0;

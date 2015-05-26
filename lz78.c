@@ -118,4 +118,5 @@ end:
  //   close(fd);
  //   bitio_close(fd_bitio);
     exit(1);
+
 }
