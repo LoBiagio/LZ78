@@ -1,11 +1,13 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
+#include "checksum.h"
 
-typedef struct checksum_enviroment {
+struct checksum_enviroment {
     char partial[4];
     int sum;
     int count;
-} CHECKENV;
+};
 
 CHECKENV *
 checksum_init() {
@@ -40,7 +42,7 @@ checksum_final(CHECKENV *checksum) {
 }
 
 int
-checksum_is_valid (CHECKENV *ce, uint32_t in)
+checksum_is_valid (CHECKENV *ce, unsigned int in)
 {
 	return (ce->partial + in == 0);
 }
@@ -49,3 +51,12 @@ void
 checksum_destroy(CHECKENV *checksum) {
     free(checksum);
 }
+
+/*int test() {
+    char *string = "Prova di checksum\n";
+    int slen = strlen(string);
+    CHECKENV *cs = checksum_init();
+    checksum_update(cs, string, slen);
+    unsigned int result = checksum_final(cs);
+    return 0;
+}*/
