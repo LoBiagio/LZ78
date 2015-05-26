@@ -12,7 +12,7 @@
 #include "checksum.h"
 #define DICT_SIZE 10000
 
-int write_header(int fd_r, struct bitio *fd_w, char *filename, int dict_size) {
+int write_header(int fd_r, struct bitio *fd_w, char *filename, unsigned int dict_size) {
     int ret, i, size;
     uint64_t file_size, last_mod;
     unsigned int checksum;
@@ -74,7 +74,8 @@ int write_header(int fd_r, struct bitio *fd_w, char *filename, int dict_size) {
     return 0;
 }
 
-int compress(int fd_r, struct bitio *fd_w, unsigned int dict_size)
+int 
+compress(int fd_r, struct bitio *fd_w, unsigned int dict_size,int v)
 {
 	unsigned char c;
 	unsigned int father = 0, new_father;
@@ -82,13 +83,20 @@ int compress(int fd_r, struct bitio *fd_w, unsigned int dict_size)
 	TABLE *dictionary;
 	unsigned int checksum;
 	CHECKENV *cs = checksum_init();
-
 	dictionary = htable_new(dict_size);
 	while((ret = read(fd_r, &c, sizeof(char))) > 0) {
 	checksum_update(cs, (char *)&c, 1);
         if (htable_insert(dictionary, c, father, &new_father) == 1) {
+        	if(v == 1){
+        	printf("Insert in dictionary value:%c at father:%u\n",c,father);
+        	}
             i = htable_index_bits(dictionary);
+            if (v == 1){
+            printf("Number of bits read:%d\n",i);
+            printf("Writing the node %u, in file compressed\n",father);
+            }
             r = bitio_write(fd_w, (uint64_t *)&father, i);
+            
             if (r != i) {
                 printf("Error writing the compressed file\n");
                 return -1;

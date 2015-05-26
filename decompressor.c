@@ -136,7 +136,7 @@ explore_and_insert(struct darray* da, unsigned int father, unsigned int *index, 
 }
 
 int
-decompress(int fd_w, struct bitio* fd_r, unsigned int dictionary_size)
+decompress(int fd_w, struct bitio* fd_r, unsigned int dictionary_size, int v)
 {
 	int ret;
 	uint64_t tmp;
@@ -148,18 +148,29 @@ decompress(int fd_w, struct bitio* fd_r, unsigned int dictionary_size)
 	if( (da = array_new(dictionary_size)) == NULL){
 		perror("error on array_new");
 	}
+	if(v == 1){
+	printf("A new array initialized\n");
+	printf("Buffer allocation\n");
+	}
 	buf = calloc(dictionary_size + 1, sizeof(unsigned char));	//TODO check buf size
 	while( (ret = bitio_read(fd_r, &tmp, (int)(log2(da->nmemb + 257)+1)) > 0 )){ //TODO controlla ret!
 		if((unsigned int)tmp == 0){
 			break;
 		}
-		
+		if (v == 1){
+		printf("Number of bits read:%d\n",(int)log2(da->nmemb + 257)+1);
+		}
 		//Here happens the magic...
 		buf_len = explore_and_insert(da, father, (unsigned int *)&tmp, &old_value, buf);
-		
+		if (v == 1){
+		printf("Explore and insert completed. Father:%u, value read:%d, new value to add:%c\n",father,(int)tmp,old_value);
+		}
 		father = (unsigned int)tmp;
-		
 		write(fd_w, &buf[da->dim + 1 - buf_len], buf_len);	//TODO check buf size
+		if (v == 1){
+		write(0, &buf[da->dim + 1 - buf_len], buf_len);
+		printf("\n");
+		}
 		checksum_update(cs, (char *)&buf[da->dim + 1 - buf_len], buf_len);
 
 	}
@@ -177,10 +188,9 @@ decompress(int fd_w, struct bitio* fd_r, unsigned int dictionary_size)
 	return 1;
 }
 
-int
-read_header(struct bitio *fd, int *dict_size)
+int read_header(struct bitio *fd, unsigned int *dict_size) 
 {
-    int ret, i;
+   int ret, i;
     char *string;
     uint64_t buf, tmp;
     CHECKENV *cs = checksum_init();

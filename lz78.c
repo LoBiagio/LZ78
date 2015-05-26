@@ -5,21 +5,22 @@
 #include <unistd.h>
 
 #define DICT_SIZE 1000
-int compress(int,struct bitio*,unsigned int);
-int decompress(int,struct bitio*,unsigned int);
-int write_header(int, struct bitio*,char *,int);
-int read_header(struct bitio *fd, int *dict_size);
+<<<<<<< HEAD
+int compress(int,struct bitio*,unsigned int,int);
+int decompress(int,struct bitio*,unsigned int,int);
+int write_header(int, struct bitio*,char *,unsigned int);
+int read_header(struct bitio*,unsigned int *);
 
 int main(int argc, char *argv []) {
-    int fd, index;
+    int fd, index, d_v = 0, c_v = 0;
     char *c_source, *c_dest = "compressed", *d_source = "compressed", *d_dest = "NEWFILE";
-    unsigned int dict_size = DICT_SIZE;
+    unsigned int dict_size = DICT_SIZE, d_dict_size;
     struct bitio *fd_bitio;
     int opt;
     if ((opt = getopt(argc,argv,"cdh")) != -1){
     	switch (opt){
     		case 'c':
-    		while ((opt = getopt(argc,argv,"hi:o:s:")) != -1){
+    		while ((opt = getopt(argc,argv,"vhi:o:s:")) != -1){
     			switch (opt){
     				case 'i':
 					c_source = optarg;
@@ -32,7 +33,11 @@ int main(int argc, char *argv []) {
 					break;
 					case 'h':
 					printf("Usage: i <input file>, o <output file>, d <dictionary_size>\n");
-					goto end;
+					exit(1);
+					break;
+					case 'v':
+					c_v = 1;
+					break;
 					case '?':
 					if(optopt == 'i'){
 						printf("An input file is required\n");
@@ -53,46 +58,52 @@ int main(int argc, char *argv []) {
     		}
     		if(argc > 2){	
 			if ((fd = open(c_source, O_RDONLY)) < 0) {
-		    	perror("Error opening file in read mode: ");
-		    	exit(1);
-		}
-		if ((fd_bitio = bitio_open(c_dest, 'w')) == NULL) {
-			perror("Error opening file in write mode: ");
-			close(fd);
-			exit(1);
-		}
-		write_header(fd, fd_bitio, c_source, dict_size);
-		compress(fd,fd_bitio,dict_size);
-		}
-		break;
-		case 'd':
-		while((opt = getopt(argc,argv,"hi:o:")) != -1){
-			switch(opt){
-				case 'i':
-				d_source = optarg;
-				break;
-				case 'o':
-				d_dest = optarg;
-				break;
-				case 'h':
-				printf("Usage: i <input file>, o <output file>\n");
-				goto end;
-				case '?':
-				if(optopt == 'i'){
-					printf("An input file is required\n");
+	    	perror("Error opening file in read mode: ");
+	    	exit(1);
+			}
+			if ((fd_bitio = bitio_open(c_dest, 'w')) == NULL) {
+	    		perror("Error opening file in write mode: ");
+	    		close(fd);
+	    		exit(1);
+			}
+			write_header(fd,fd_bitio,c_source,dict_size);
+			printf("Compressing...\n");
+			compress(fd,fd_bitio,dict_size,c_v);
+			printf("Compress completed\n");
+			}
+			break;
+			case 'd':
+			while((opt = getopt(argc,argv,"vhi:o:")) != -1){
+				switch(opt){
+					case 'i':
+					d_source = optarg;
+					break;
+					case 'o':
+					d_dest = optarg;
+					break;
+					case 'h':
+					printf("Usage: i <input file>, o <output file>\n");
 					exit(1);
-				}
-				if(optopt == 'o'){
-					printf("No name specified for destination file\n");
-					exit(1);
-				}
-				default:
-				printf("try -h for help\n");
-			exit(1);
-			}	
-		}
-		if ( argc > 2){
-		if ((fd = open (d_dest, (O_CREAT | O_TRUNC | O_WRONLY) , 0666)) < 0) {
+					break;
+					case 'v':
+					d_v = 1;
+					break;
+					case '?':
+					if(optopt == 'i'){
+						printf("An input file is required\n");
+						exit(1);
+					}
+					if(optopt == 'o'){
+						printf("No name specified for destination file\n");
+						exit(1);
+					}
+					default:
+					printf("try -h for help\n");
+    				exit(1);
+				}	
+			}
+			if ( argc > 2){
+			if ((fd = open (d_dest, (O_CREAT | O_TRUNC | O_WRONLY) , 0666)) < 0) {
         	perror("Error opening file in write mode: ");
         	exit(1);
         	}
@@ -101,8 +112,10 @@ int main(int argc, char *argv []) {
         	close(fd);
         	exit(1);
       		}
-      		read_header(fd_bitio, &dict_size);
-    		decompress(fd,fd_bitio,dict_size);
+      		read_header(fd_bitio,&d_dict_size);
+      		printf("Decompressing...\n");
+    		decompress(fd,fd_bitio,d_dict_size,d_v);
+    		printf("Decompress completed\n");
     		}
     		break;
     		case 'h':
@@ -119,14 +132,7 @@ int main(int argc, char *argv []) {
     	printf ("Non-option argument %s\n", argv[index]);   
     }*/
 
-   /* if (write_header(fd_r, fd_w, filename, dict_size) < 0) {
-        close(fd_r);
-        bitio_close(fd_w);
-        htable_destroy(dictionary);
-        exit(1);
-    }*/
-  
-    return 0;
+      return 0;
 end:
  //   close(fd);
  //   bitio_close(fd_bitio);
