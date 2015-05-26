@@ -5,19 +5,20 @@
 #include <unistd.h>
 
 #define DICT_SIZE 1000
-int compress(int,struct bitio*,unsigned int);
-int decompress(int,struct bitio*,unsigned int);
-int write_header(int, struct bitio*,char *,int);
+int compress(int,struct bitio*,unsigned int,int);
+int decompress(int,struct bitio*,unsigned int,int);
+int write_header(int, struct bitio*,char *,unsigned int);
+int read_header(struct bitio*,unsigned int *);
 int main(int argc, char *argv []) {
-    int fd, index;
+    int fd, index, d_v = 0, c_v = 0;
     char *c_source, *c_dest = "compressed", *d_source = "compressed", *d_dest = "NEWFILE";
-    unsigned int dict_size = DICT_SIZE;
+    unsigned int dict_size = DICT_SIZE, d_dict_size;
     struct bitio *fd_bitio;
     int opt;
     if ((opt = getopt(argc,argv,"cdh")) != -1){
     	switch (opt){
     		case 'c':
-    		while ((opt = getopt(argc,argv,"hi:o:s:")) != -1){
+    		while ((opt = getopt(argc,argv,"vhi:o:s:")) != -1){
     			switch (opt){
     				case 'i':
 					c_source = optarg;
@@ -30,7 +31,11 @@ int main(int argc, char *argv []) {
 					break;
 					case 'h':
 					printf("Usage: i <input file>, o <output file>, d <dictionary_size>\n");
-					goto end;
+					exit(1);
+					break;
+					case 'v':
+					c_v = 1;
+					break;
 					case '?':
 					if(optopt == 'i'){
 						printf("An input file is required\n");
@@ -59,11 +64,14 @@ int main(int argc, char *argv []) {
 	    		close(fd);
 	    		exit(1);
 			}
-			compress(fd,fd_bitio,dict_size);
+			//write_header(fd,fd_bitio,c_source,dict_size);
+			printf("Compressing...\n");
+			compress(fd,fd_bitio,dict_size,c_v);
+			printf("Compress completed\n");
 			}
 			break;
 			case 'd':
-			while((opt = getopt(argc,argv,"hi:o:")) != -1){
+			while((opt = getopt(argc,argv,"vhi:o:")) != -1){
 				switch(opt){
 					case 'i':
 					d_source = optarg;
@@ -73,7 +81,11 @@ int main(int argc, char *argv []) {
 					break;
 					case 'h':
 					printf("Usage: i <input file>, o <output file>\n");
-					goto end;
+					exit(1);
+					break;
+					case 'v':
+					d_v = 1;
+					break;
 					case '?':
 					if(optopt == 'i'){
 						printf("An input file is required\n");
@@ -98,7 +110,10 @@ int main(int argc, char *argv []) {
         	close(fd);
         	exit(1);
       		}
-    		decompress(fd,fd_bitio,dict_size);
+      		//read_header(fd_bitio,&d_dict_size);
+      		printf("Decompressing...\n");
+    		decompress(fd,fd_bitio,d_dict_size,d_v);
+    		printf("Decompress completed\n");
     		}
     		break;
     		case 'h':
