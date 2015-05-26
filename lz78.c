@@ -7,6 +7,7 @@
 #define DICT_SIZE 1000
 int compress(int,struct bitio*,unsigned int);
 int decompress(int,struct bitio*,unsigned int);
+int write_header(int, struct bitio*,char *,int);
 int main(int argc, char *argv []) {
     int fd, index;
     char *c_source, *c_dest = "compressed", *d_source = "compressed", *d_dest = "NEWFILE";
@@ -16,7 +17,7 @@ int main(int argc, char *argv []) {
     if ((opt = getopt(argc,argv,"cdh")) != -1){
     	switch (opt){
     		case 'c':
-    		while ((opt = getopt(argc,argv,"hi:o:d:")) != -1){
+    		while ((opt = getopt(argc,argv,"hi:o:s:")) != -1){
     			switch (opt){
     				case 'i':
 					c_source = optarg;
@@ -24,7 +25,7 @@ int main(int argc, char *argv []) {
 					case 'o':
 					c_dest = optarg;
 					break;
-					case 'd':
+					case 's':
 					dict_size = atoi(optarg);
 					break;
 					case 'h':
@@ -39,13 +40,13 @@ int main(int argc, char *argv []) {
 						printf("No name specified for destination file\n");
 						exit(1);
 					}
-					if(optopt == 'd'){
+					if(optopt == 's'){
 						printf("No dimension specified for dictionary size\n");
 						exit(1);
 					}
     				default:
     				printf("try -h for help\n");
-    				goto end;
+    				exit(1);
     			}
     		}
     		if(argc > 2){	
@@ -84,9 +85,10 @@ int main(int argc, char *argv []) {
 					}
 					default:
 					printf("try -h for help\n");
-    				goto end;
+    				exit(1);
 				}	
 			}
+			if ( argc > 2){
 			if ((fd = open (d_dest, (O_CREAT | O_TRUNC | O_WRONLY) , 0666)) < 0) {
         	perror("Error opening file in write mode: ");
         	exit(1);
@@ -97,6 +99,7 @@ int main(int argc, char *argv []) {
         	exit(1);
       		}
     		decompress(fd,fd_bitio,dict_size);
+    		}
     		break;
     		case 'h':
     		printf("Usage: c <options> for compress, d <options> for decompress\n");
