@@ -1,42 +1,27 @@
-#Makefile
+#lz78
+
+# LZ78 is a compression algorithm by A. Lempel J. Ziv.
+# The version of the algorithm implemented in this program is a bit different
+# from the original. It starts with a pre-filled dictionary and all the non 
+# matching characters encountered during encoding are sent as the first 
+# characters of the next string.
+
+# Most of the rules in this makefile are implicit. We just set the desired 
+# values in the variables and let make do all the work for us.
 
 CC=gcc
-CFLAGS=-g -c
-LFLAGS=-lm
+CPPFLAGS=-g
+LDLIBS=-lm
 
 .PHONY: clean
 
 all: lz78
 
-lz78: lz78.o compressor.o decompressor.o htable.o bitio.o checksum.o
-	$(CC) $^ -o $@ $(LFLAGS)
+lz78: compressor.o decompressor.o htable.o bitio.o checksum.o
 
-lz78.o: lz78.c
-	$(CC) $(CFLAGS) $^ -o $@
+compressor.o: htable.h bitio.h checksum.h
 
-compressor: compressor.o htable.o bitio.o
-	$(CC) $^ -o $@ $(LFLAGS)
-
-decompressor: decompressor.o bitio.o
-	$(CC) $^ -o $@ $(LFLAGS)
-
-compressor.o: compressor.c htable.h bitio.h checksum.h
-	$(CC) $(CFLAGS) $< -o $@
-
-decompressor.o: decompressor.c bitio.h checksum.h
-	$(CC) $(CFLAGS) $< -o $@
-
-checksum.o: checksum.c
-	$(CC) $(CFLAGS) $? -o $@
-	
-bitio.o: bitio.c
-	$(CC) $(CFLAGS) $? -o $@
-
-htable.o: htable.c
-	$(CC) $(CFLAGS) $? -o $@
+decompressor.o: bitio.h checksum.h
 
 clean:
-	rm -fr *.o; \
-       if [ -e B_NEW ] ; then rm B_NEW ; fi ; \
-       if [ -e compressed ] ; then rm compressed ; fi
-
+	rm -fr *.o;

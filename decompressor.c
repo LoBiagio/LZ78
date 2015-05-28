@@ -3,25 +3,44 @@
 #include <stdio.h>
 #include <stdint.h>
 #include <fcntl.h>
-#include "bitio.h"
 #include <errno.h>
 #include <string.h>
-#include <math.h>
-#include "checksum.h"
 #include <time.h>
+#include <math.h>
+
+#include "checksum.h"
+#include "bitio.h"
+
+/**
+ * @brief This struct represent a decompressor dictionary entry.
+ */
 typedef struct
 {
-    unsigned int father;
-    unsigned char value;
+    unsigned int father; /** The value for this node father. */
+    unsigned char value; /** The value (character) of the current character. */
 }DENTITY;
 
+/**
+ * @brief This struct represent the decompressor dictionary.
+ *
+ * On the decompressor side we can use a simple array of dictionary nodes.
+ * We perform each insertion in the first unused slot. We obtain this
+ * adding each new entity in d->dictionary[d->nmemb].
+ */
 struct darray
 {
-    DENTITY* dictionary;
-     unsigned int nmemb;
-     unsigned int dim;
+    DENTITY* dictionary; /** The array of dictionary's entries */
+     unsigned int nmemb; /** Number of entities currently stored */
+     unsigned int dim; /** Maximum number of elements that can be stored */
 };
 
+/**
+ * @brief Create a new struct darray of the given size.
+ *
+ * @param size The number of entry the newly created struct darray can store.
+ * @return A pointer to the newly created struct darray. If some kind of 
+ * error occours, this function returns NULL.
+ */
 struct darray *
 array_new(unsigned int size)
 {
@@ -34,29 +53,56 @@ array_new(unsigned int size)
     if (tmp->dictionary == NULL){
         return NULL;
     }
+    //TODO memset should not be necessary
     memset(tmp->dictionary,0,size * sizeof(DENTITY));
     tmp->nmemb = 0;
     tmp->dim = size;
     return tmp;        
 }
 
+/**
+ * @brief Reset the dictionary without deallocating it
+ */
 void
 array_reset (struct darray *da){
     memset(da->dictionary, 0, sizeof(DENTITY)*da->dim);
     da->nmemb = 0;
 }
 
+/**
+ * @brief Returns how many nodes are currently stored in the dictionary.
+ * 
+ * @return The number of elements stored in the dictionary
+ */
 unsigned int
 get_size (struct darray* da)
 {
     return da->nmemb;
 }
-//explore the tree from bottom to top and rfill the buffer with the read characters, returns the number of characters in the buffer
-//in value there is the missing character of the previous call
+
+/**
+ * @brief This function explore the dictionary and stores the decoded string.
+ *
+ * This function explores the dictionary starting from one of its leafs to the
+ * root. It stores the decoded string and passes such string to the caller.
+ * The first character of the decoded string is also stored in the character 
+ * pointed by <value>. explore_darray() does so since such first character is
+ * the one that has to be stored as <value> for the node we should have added 
+ * at the previous decoding. We delayed the insertion since we ignored the 
+ * value of the mismatching character at that moment.
+ *
+ * @param *da pointer to struct darray.
+ * @param index This is the index we receive from the compressor. It is our 
+ * starting point for the dictionary exploration.
+ * @param *buf pointer to the buffer for the output decoding string
+ * @param *value The first character of the decoded string
+ * @return The number of characters inserted into the decoding buffer buf. If
+ * either <da> or <buf> are NULL, explore_darray returns -1
+ */
 unsigned int
-explore_darray (struct darray *da, unsigned int index, char *buf, unsigned char *value)
+explore_darray(struct darray *da, unsigned int index, char *buf, unsigned char *value)
 {
-    unsigned int offset; //counter from the bottom of the buffer (same size as the dictionary)
+    unsigned int offset;
     if ( (da == NULL) || (buf == NULL) ){
         errno = EINVAL;
         return -1;
@@ -67,7 +113,10 @@ explore_darray (struct darray *da, unsigned int index, char *buf, unsigned char 
         buf[offset] = (unsigned char)index;
         return 1;
     }
-    
+
+    /* Notice how we deal with the first 256 extended ASCII character which 
+     * are not effectively stored into the dictionary.
+     */
     while (da->dictionary[index-256].father >= 256){ //explore the tree
         buf[offset] = da->dictionary[index-256].value;
         offset--;
@@ -76,10 +125,24 @@ explore_darray (struct darray *da, unsigned int index, char *buf, unsigned char 
     buf[offset] = da->dictionary[index-256].value;
     buf[--offset] = (unsigned char)da->dictionary[index-256].father;
     *value = (unsigned char)da->dictionary[index-256].father;
-    return da->dim + 1- offset;    //TODO check buf size
+    return da->dim + 1 - offset;
 }
 
-/*
+/**
+ * @brief This function performs all the actions for inserting a new node 
+ * inside the dictionary.
+ *
+ * This function is called every time the decompressor receives a new node 
+ * index. In particular, it decodes the index and adds a new node with the same 
+ * characted value as the first character of the decode string.
+ * The exploration starts from the value passed in <index> and continues 
+ * until the function reaches the first layer of root offsprings.
+ * The first offsprings are stored such that each node contains a character 
+ * value equal to its own index (i.e. the string 'A' is encoded as 65).
+ * With such design, explore_and_insert() can check when the first root 
+ * offsprings are reached and so it can decode the first characted for the
+ * output string.
+ *
  * @param da pointer to decompressor's dictionary.
  * @param father The father of the new node.
  * @param index The value that must be decoded.
