@@ -69,7 +69,7 @@ int main(int argc, char *argv []) {
 				exit(1);
 	 	}	
 	}
-	if(compr == 1){	
+	if(compr == 1){	//compressing
 		if ((fd = open(source, O_RDONLY)) < 0) {
 			perror("Error opening file in read mode: ");
 			exit(1);
@@ -84,8 +84,8 @@ int main(int argc, char *argv []) {
 		compress(fd,fd_bitio,dict_size,v);
 		printf("Compress completed\n");
 	}
-	if (compr == 2){
-		if (s == 1){
+	if (compr == 2){ //decompressing
+		if (s == 1){ //if s is set on the decompressor we return an error
 			printf("Error on  specifying dictionary size\n");
 			exit(1); 
 		}
@@ -107,11 +107,6 @@ int main(int argc, char *argv []) {
 		    printf("Decompress completed\n");
 		}
 	}
-    		
-  /*  for (index = optind; index < argc; index++){
-    	printf ("Non-option argument %s\n", argv[index]);   
-    }*/
-
 	return 0;
 
 }
