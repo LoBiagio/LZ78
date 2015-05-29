@@ -9,12 +9,21 @@ struct checksum_enviroment {
     int count;
 };
 
+/**
+ * This function allocates the struct to perform the checksum
+ */ 
 CHECKENV *
 checksum_init() {
     CHECKENV *checksum = (CHECKENV *)calloc(1, sizeof(CHECKENV));
     return checksum;
 }
 
+/**
+ * Update checksum sum
+ * @param checksum The struct containg checksum data
+ * @param buf The buffer containing bytes on which perform checksum
+ * @param size The number of bytes in buf
+ */
 void
 checksum_update(CHECKENV *checksum, char *buf, int size) {
     int i = 0, j;
@@ -33,6 +42,9 @@ checksum_update(CHECKENV *checksum, char *buf, int size) {
     }
 }
 
+/**
+ * Returns the checksum of the values passed to checksum_update
+ */
 unsigned int
 checksum_final(CHECKENV *checksum) {
     if (checksum->count != 0) {
@@ -41,12 +53,9 @@ checksum_final(CHECKENV *checksum) {
     return (unsigned int)htole32(0 - checksum->sum);
 }
 
-int
-checksum_is_valid (CHECKENV *ce, unsigned int in)
-{
-    return (ce->partial + in == 0);
-}
-
+/**
+ * Deallocate the struct containing checksum data
+ */
 void
 checksum_destroy(CHECKENV *checksum) {
     free(checksum);
