@@ -8,6 +8,8 @@
 
 # Most of the rules in this makefile are implicit. We just set the desired 
 # values in the variables and let make do all the work for us.
+# See https://www.gnu.org/prep/standards/html_node/index.html
+# for more informations
 
 CC=gcc
 CPPFLAGS=-g
