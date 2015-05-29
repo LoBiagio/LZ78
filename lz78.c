@@ -51,21 +51,21 @@ int main(int argc, char *argv []) {
 			break;
 			case '?':
 			if(optopt == 'i'){
-				printf("An input file is required\n");
+				fprintf(stderr,"An input file is required\n");
 				exit(1);
 			} else if(optopt == 'o'){
-				printf("No name specified for destination file\n");
+				fprintf(stderr,"No name specified for destination file\n");
 				exit(1);
 			} else if(optopt == 's'){
-				printf("No dimension specified for dictionary size\n");
+				fprintf(stderr,"No dimension specified for dictionary size\n");
 				exit(1);
 			} else{
-				printf("Try -h for help\n");
+				fprintf(stderr,"Try -h for help\n");
 				exit(1);
 			}
 			break;
 			default:
-				printf("Try -h for help\n");
+				fprintf(stderr,"Try -h for help\n");
 				exit(1);
 	 	}	
 	}
@@ -80,13 +80,17 @@ int main(int argc, char *argv []) {
 			exit(1);
 		}
 		write_header(fd,fd_bitio,source,dict_size);
+		if(v == 1){
 		printf("Compressing...\n");
+		}
 		compress(fd,fd_bitio,dict_size,v);
+		if (v == 1){
 		printf("Compress completed\n");
+		}
 	}
 	if (compr == 2){ //decompressing
 		if (s == 1){ //if s is set on the decompressor we return an error
-			printf("Error on  specifying dictionary size\n");
+			fprintf(stderr,"Error on  specifying dictionary size\n");
 			exit(1); 
 		}
 		if ((fd = open (dest, (O_CREAT | O_TRUNC | O_WRONLY) , 0666)) < 0) {
