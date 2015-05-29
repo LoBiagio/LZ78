@@ -17,7 +17,7 @@ int read_header(struct bitio*,unsigned int *);
  *	s with the size of the dictionary.
  */
 int main(int argc, char *argv []) {
-    int fd, index, v = 0, compr = 0;
+    int fd, s = 0, v = 0, compr = 0;
     //compr is set to 1 if we want to compress, set to 2 if we want to decompress
     char *source, *dest;
     unsigned int dict_size = DICT_SIZE, d_dict_size;
@@ -39,13 +39,8 @@ int main(int argc, char *argv []) {
 				dest = optarg; //take the output name from optarg
 			break;
 			case 's':
-			if(compr == 1){
 			dict_size = atoi(optarg);
-			} 
-			else{
-				fprintf(stderr,"Size specified only with option c\n");
-				exit(1);
-			}
+			s = 1;
 			break;
 			case 'h':
 				printf("Usage: c for compress, d for decompress, i <input file>, o <output file>, d <dictionary_size>\n");
@@ -89,6 +84,10 @@ int main(int argc, char *argv []) {
 		printf("Compress completed\n");
 	}
 	if (compr == 2){
+		if (s == 1){
+			printf("Error on  specifying dictionary size\n");
+			exit(1); 
+		}
 		if ((fd = open (dest, (O_CREAT | O_TRUNC | O_WRONLY) , 0666)) < 0) {
 			perror("Error opening file in write mode: ");
 			exit(1);
