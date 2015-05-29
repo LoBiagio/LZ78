@@ -12,7 +12,7 @@
 # for more informations
 
 CC=gcc
-CPPFLAGS=-g
+CPPFLAGS=-g -Wall -Werror
 LDLIBS=-lm
 
 .PHONY: clean test

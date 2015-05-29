@@ -20,8 +20,7 @@ struct htable
     int collision;
 };
 
-TABLE *
-htable_new(int size) {
+TABLE *htable_new(int size) {
     TABLE *table = (TABLE *)calloc(1, sizeof(TABLE));
     if (table == NULL) {
         printf("Error: table allocation failed.\n");
@@ -38,8 +37,7 @@ htable_new(int size) {
     return table;
 }
 
-void
-htable_clear(TABLE *table) {
+void htable_clear(TABLE *table) {
     memset(table->entries, 0, table->dim * sizeof(ENTRY));
     table->nmemb = 0;
 }
@@ -48,15 +46,13 @@ int htable_nmemb(TABLE *table) {
     return table->nmemb;
 }
 
-unsigned int
-get_hash(char value, int index, unsigned int dim) {
+unsigned int get_hash(char value, int index, unsigned int dim) {
     unsigned int hash = 5381u;
     return ((hash << 5) + hash) * value + index * (dim - value);
 }
 
 /* index is the position where the value has been found or can be stored */
-int
-htable_getPosition(TABLE *table, unsigned char value, int father, unsigned int *index) {
+int htable_getPosition(TABLE *table, unsigned char value, int father, unsigned int *index) {
     int search = 0;
     // <value, father> conresponds to a prestored element
     if (father == 0) {
@@ -87,8 +83,7 @@ htable_getPosition(TABLE *table, unsigned char value, int father, unsigned int *
     It returns <1> if insertion succeeds
                <0> if <value, father> is already in table
 */
-int
-htable_insert(TABLE *table, unsigned char value, unsigned int father, unsigned int *new_father) {
+int htable_insert(TABLE *table, unsigned char value, unsigned int father, unsigned int *new_father) {
     unsigned int position;
     // Element already in table
     if (htable_getPosition(table, value, father, &position)) {
@@ -121,22 +116,19 @@ htable_insert(TABLE *table, unsigned char value, unsigned int father, unsigned i
     return 1;
 }
 
-int
-htable_index_bits(TABLE *table) {
+int htable_index_bits(TABLE *table) {
     // Once the dictionary is cleared the index of the father is sent to the decompressor
     // That index is on the same bit length of table->dim
     return table->nmemb == 0 ? (int)ceil(log2(table->dim + 256)) : (int)ceil(log2(table->nmemb + 256));
 }
 
-void
-htable_destroy(TABLE *table) {
+void htable_destroy(TABLE *table) {
     htable_clear(table);
     free(table->entries);
     table->dim = 0;
     free(table);
 }
 
-int
-htable_collision(TABLE *table) {
+int htable_collision(TABLE *table) {
     return table->collision;
 }

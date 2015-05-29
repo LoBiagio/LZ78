@@ -98,7 +98,7 @@ get_size (struct darray* da)
  * either <da> or <buf> are NULL, explore_darray returns -1
  */
 unsigned int
-explore_darray(struct darray *da, unsigned int index, char *buf, unsigned char *value)
+explore_darray(struct darray *da, unsigned int index, unsigned char *buf, unsigned char *value)
 {
     unsigned int offset;
     if ( (da == NULL) || (buf == NULL) ){
