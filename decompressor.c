@@ -270,7 +270,9 @@ decompress(int fd_w, struct bitio* fd_r, unsigned int dictionary_size, int v)
         printf("Errore checksum\n");
         return -1;
     }
-    printf("File checksum matches\n");
+    if (v == 1) {
+        printf("File checksum matches\n");
+    }
     checksum_destroy(cs);
     bitio_close(fd_r);
     close(fd_w);
