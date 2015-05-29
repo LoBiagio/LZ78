@@ -16,7 +16,7 @@ int main(int argc, char *argv []) {
     unsigned int dict_size = DICT_SIZE, d_dict_size;
     struct bitio *fd_bitio;
     int opt;
-    while ((opt = getopt(argc,argv,"cdvi:o:s:")) != -1){
+    while ((opt = getopt(argc,argv,"cdvi:o:s:ih")) != -1){
 		switch (opt){
 			case 'c':
 			compr = 1;
@@ -32,7 +32,7 @@ int main(int argc, char *argv []) {
 				d_source = optarg;
 			}
 			break;
-			case 'o':
+			case 'o': //FIXME così non prende il nome output se -d lo specifico da ultimo
 			if(compr == 1){
 				c_dest = optarg;
 			}
@@ -48,11 +48,11 @@ int main(int argc, char *argv []) {
 				fprintf(stderr,"size specified only with option c\n");
 			}
 			break;
-			/*	case 'h':
-				printf("Usage: i <input file>, o <output file>, d <dictionary_size>\n");
+				case 'h':
+				printf("Usage: i <input file>, o <output file>, s <dictionary_size>\n");
 				exit(1);
 				break;
-		*/	case 'v':
+			case 'v':
 			if (compr == 1){
 				c_v = 1;
 			}

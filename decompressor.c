@@ -155,14 +155,26 @@ explore_and_insert(struct darray* da, unsigned int father, unsigned int *index, 
 {
     unsigned int buf_len;
     
-    if (father == 0) { //only first label received. Value to be added is unknow, so we don't perform an insert.
+    /* If father is 0, then we are trying to insert a single non matching 
+     * character so no real insertion is needed since the first 256 extended 
+     * ASII characters are only virtually present in the dictionary. 
+     * This condition holds for every insertion after the dictionary has been
+     * reset
+     * */
+    if (father == 0) {
 
         //exploring
         buf_len = explore_darray(da, *index, buf, old_value);
         return buf_len;
     }
     
-    if (*index == get_size(da) + 256) { //The 'recursion' case
+    /* The check below must handle the case when the compressor sents a value 
+     * not present in the dictionary yet. In this case the character value for 
+     * the newly inserted node is the value seen at the previous iteration.
+     * In this case we must first add the new node and then start the 
+     * dictionary exploration.
+     */
+    if (*index == get_size(da) + 256) {
         
         //adding
         da->dictionary[da->nmemb].father = father;
@@ -172,6 +184,7 @@ explore_and_insert(struct darray* da, unsigned int father, unsigned int *index, 
         //exploring
         buf_len = explore_darray(da, *index, buf, old_value);
         
+	//TODO merge the dictionary full case and return statement.
         //there may be the need for a dictionary reset
         if (da->nmemb >= da->dim) {
             array_reset(da);    //after dictionary reset, father must be reset!
@@ -198,6 +211,20 @@ explore_and_insert(struct darray* da, unsigned int father, unsigned int *index, 
     return buf_len;        
 }
 
+/**
+ * @brief This function start the decompressing of a file.
+ * This function also read the header and validate the checksum.
+ * 
+ * @param fd_w The input file descriptor. decompress() expected it to be 
+ * already open.
+ * @param fd_r The output file descriptor. decompress() expect it to be 
+ * already open.
+ * @param dictionary_size The size of the dictionary the decompressor is 
+ * going to use.
+ * @param v Verbose. If it is equal to 1, some additional informations are 
+ * printed on the stdout.
+ * @return 0 if no errors occurred, -1 otherwise
+ */
 int
 decompress(int fd_w, struct bitio* fd_r, unsigned int dictionary_size, int v)
 {
@@ -215,21 +242,26 @@ decompress(int fd_w, struct bitio* fd_r, unsigned int dictionary_size, int v)
     printf("A new array initialized\n");
     printf("Buffer allocation\n");
     }
-    buf = calloc(dictionary_size + 1, sizeof(unsigned char));    //TODO check buf size
-    while( (ret = bitio_read(fd_r, &tmp, (int)(log2(da->nmemb + 257)+1)) > 0 )){ //TODO controlla ret!
-        if((unsigned int)tmp == 0){
+    buf = calloc(dictionary_size + 1, sizeof(unsigned char));
+    while ((ret = bitio_read(fd_r, &tmp, (int)(log2(da->nmemb + 257)+1)) > 0)) {
+        if ((unsigned int)tmp == 0) {
             break;
         }
         if (v == 1){
             printf("Number of bits read:%d\n",(int)log2(da->nmemb + 257)+1);
         }
-        //Here happens the magic...
+
         buf_len = explore_and_insert(da, father, (unsigned int *)&tmp, &old_value, buf);
         if (v == 1){
             printf("Explore and insert completed. Father:%u, value read:%d, new value to add:%c\n",father,(int)tmp,old_value);
         }
+	/* The father of the next node to be added is the value read at this 
+	 * iteraction. This is always true except if the dictionary has just 
+	 * been reset. In this case the value of tmp is correctly set to 0 by 
+	 * explore_and_insert().
+	 */
         father = (unsigned int)tmp;
-        write(fd_w, &buf[da->dim + 1 - buf_len], buf_len);    //TODO check buf size
+        write(fd_w, &buf[da->dim + 1 - buf_len], buf_len);
         if (v == 1){
             write(0, &buf[da->dim + 1 - buf_len], buf_len);
             printf("\n");
@@ -237,20 +269,41 @@ decompress(int fd_w, struct bitio* fd_r, unsigned int dictionary_size, int v)
         checksum_update(cs, (char *)&buf[da->dim + 1 - buf_len], buf_len);
 
     }
+
+    /* Computing checksum */
     tmp = 0;
-    ret = bitio_read(fd_r, &tmp, 32); //TODO controlla ret
+    ret = bitio_read(fd_r, &tmp, 32);
     ret = le32toh((int)tmp);
     if (ret != checksum_final(cs)) {
         printf("Errore checksum\n");
-        return 1;
+        return -1;
     }
     printf("File checksum matches\n");
     checksum_destroy(cs);
     bitio_close(fd_r);
     close(fd_w);
-    return 1;
+    return 0;
 }
 
+/**
+ * @brief Read all the information in the file header.
+ *
+ * The header is composed by the information fields listed below:
+ * - original file name lenght (8 bits)
+ * - original file name (variable lenght)
+ * - original file size (64 bits)
+ * - last modification (64 bits)
+ * - dictionary lenght (32 bits)
+ * - header checksum (32 bits)
+ *
+ * While reading the header, this function also compute and validate the header 
+ * checksum.
+ * 
+ * @param fd the input file.
+ * @param dict_size The content of dictionary lenght read in this file's header.
+ * @return 0 if no errors occured, -1 otherwise
+ */ 
+//TODO rimuovere errori su stdout
 int read_header(struct bitio *fd, unsigned int *dict_size) 
 {
     int ret, i;
