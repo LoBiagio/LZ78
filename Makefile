@@ -15,7 +15,7 @@ CC=gcc
 CPPFLAGS=-g
 LDLIBS=-lm
 
-.PHONY: clean
+.PHONY: clean test
 
 all: lz78
 
@@ -27,3 +27,6 @@ decompressor.o: bitio.h checksum.h
 
 clean:
 	rm -fr *.o;
+
+test: lz78
+	testers/comp_decomp.sh
