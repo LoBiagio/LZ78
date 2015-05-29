@@ -11,6 +11,41 @@
 #include "bitio.h"
 #include "checksum.h"
 
+/**
+ * This function parses the string (which identifies the file-to-compress) to
+ * check if a path has been specified insted of just the file name
+ * @param string The string to parse
+ * @param len The string length
+ * @return The pointer to the location in which the file name starts
+ */
+char
+*getfilename(char *string, int len) {
+    int i;
+    char *ret = string;
+    for (i = len - 1; i > 0; i--) {
+        ret = string + i - 1;
+        if (*ret == '/') {
+            return ret + 1;
+        }
+    }
+    return ret;
+}
+/**
+ * Write header function
+ * It writes informations about file to compress:
+ *  - Number of characters for file name (8 bit)
+ *  - Original file name (variable length)
+ *  - Original file size (64 bit)
+ *  - Time of last modification (64 bit)
+ *  - Dictionary length (32 bit)
+ *  - Header chechsum (32 bit)
+ * @param fd_r The file-to-compress descriptor
+ * @param fd_w The bitio-file-to-write descriptor
+ * @param filename The string passed as input to the compressor containing the
+ * path of the file to compress
+ * @param dict_size The dictionary dimension
+ * @return 0 on succes, -1 on fail
+ */
 int
 write_header(int fd_r, struct bitio *fd_w, char *filename, unsigned int dict_size) {
     int ret, i, size;
@@ -18,12 +53,14 @@ write_header(int fd_r, struct bitio *fd_w, char *filename, unsigned int dict_siz
     unsigned int checksum;
     struct stat file_info;
     CHECKENV *cs = checksum_init();
-
+    // Get file-to-compress info
     if (fstat(fd_r, &file_info) < 0) {
         perror("Error retriving file info: ");
         return -1;
     }
     // File name length
+    size = strlen(filename);
+    filename = getfilename(filename, size);
     size = strlen(filename);
     ret = bitio_write(fd_w, (uint64_t *)&size, 8);
     if (ret != 8) {
@@ -74,8 +111,18 @@ write_header(int fd_r, struct bitio *fd_w, char *filename, unsigned int dict_siz
     return 0;
 }
 
-int 
-compress(int fd_r, struct bitio *fd_w, unsigned int dict_size,int v)
+/**
+ * Compress function
+ * LZ78 algorithm to compress a text file. It also computes the file-to-compress
+ * checksum as if it reads its contents.
+ * @param fd_r The file-to-compress descriptor
+ * @param fd_w The bitio-file-to-write descriptor
+ * @param dict_size The dictionary dimension
+ * @param v Verbose property
+ * @return 0 on succes, -1 on fail
+ */
+int
+compress(int fd_r, struct bitio *fd_w, unsigned int dict_size, int v)
 {
     unsigned char c;
     unsigned int father = 0, new_father;
@@ -86,18 +133,16 @@ compress(int fd_r, struct bitio *fd_w, unsigned int dict_size,int v)
 
     dictionary = htable_new(dict_size);
     while((ret = read(fd_r, &c, sizeof(char))) > 0) {
+        // Update checksum value of the file-to-compress
         checksum_update(cs, (char *)&c, 1);
+        // The couple <c,father> is inserted in dictionary if it is not already
+        // present. If an insertion is performed, htable_insert returns 1, 0
+        // otherwise. The function also updates the new_father: in case of a
+        // match in the tree, new_father = index of the match. Otherwise
+        // new_father = index of the couple <character which did not match,0>
         if (htable_insert(dictionary, c, father, &new_father) == 1) {
-            if(v == 1) {
-                printf("Insert in dictionary value:%c at father:%u\n",c,father);
-            }
             i = htable_index_bits(dictionary);
-            if (v == 1) {
-                printf("Number of bits read:%d\n",i);
-                printf("Writing the node %u, in file compressed\n",father);
-            }
             r = bitio_write(fd_w, (uint64_t *)&father, i);
-                
             if (r != i) {
                 printf("Error writing the compressed file\n");
                 return -1;
@@ -109,10 +154,21 @@ compress(int fd_r, struct bitio *fd_w, unsigned int dict_size,int v)
         printf("Error reading file to compress\n");
         return -1;
     }
-    bitio_write(fd_w, (uint64_t *)&father, htable_index_bits(dictionary));
+    // Last value not written in the cycle
+    i = htable_index_bits(dictionary);
+    r = bitio_write(fd_w, (uint64_t *)&father, i);
+    if (r != i) {
+        printf("Error writing the compressed file\n");
+        return -1;
+    }
+    // 0 is written to indicate the end of the compressed data
     father = 0;
-    bitio_write(fd_w, (uint64_t *)&father, htable_index_bits(dictionary));
-    
+    i = htable_index_bits(dictionary);
+    r = bitio_write(fd_w, (uint64_t *)&father, htable_index_bits(dictionary));
+    if (r != i) {
+        printf("Error writing the compressed file\n");
+        return -1;
+    }
     // File checksum
     checksum = (unsigned int)htole32(checksum_final(cs));
     bitio_write(fd_w, (uint64_t *)&checksum, 32);
@@ -121,5 +177,5 @@ compress(int fd_r, struct bitio *fd_w, unsigned int dict_size,int v)
     htable_destroy(dictionary);
     close(fd_r);
     bitio_close(fd_w);
-    return 1;
+    return 0;
 }
