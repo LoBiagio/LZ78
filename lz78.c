@@ -10,8 +10,16 @@ int decompress(int,struct bitio*,unsigned int,int);
 int write_header(int, struct bitio*,char *,unsigned int);
 int read_header(struct bitio*,unsigned int *, int);
 
+/**
+ * @brief In the main we can choose these options without any argument:
+ * c for compress, d for decompress, h for help, v for verbose;
+ *	and these options with the relative argument:
+ *	i with the name of the input file, o with the name of the output file and
+ *	s with the size of the dictionary.
+ */
 int main(int argc, char *argv []) {
     int fd, index, v = 0, compr = 0;
+    //compr is set to 1 if we want to compress, set to 2 if we want to decompress
     char *source, *dest;
     unsigned int dict_size = DICT_SIZE, d_dict_size;
     struct bitio *fd_bitio;
@@ -26,10 +34,10 @@ int main(int argc, char *argv []) {
 			compr = (compr==1?compr:2);
 			break;
 			case 'i':
-				source = optarg;
+				source = optarg; //take the input name from optarg
 			break;
 			case 'o':
-				dest = optarg;
+				dest = optarg; //take the output name from optarg
 			break;
 			case 's':
 			if(compr == 1){
@@ -50,19 +58,21 @@ int main(int argc, char *argv []) {
 			if(optopt == 'i'){
 				printf("An input file is required\n");
 				exit(1);
-			}
-			if(optopt == 'o'){
+			} else if(optopt == 'o'){
 				printf("No name specified for destination file\n");
 				exit(1);
-			}
-			if(optopt == 's'){
+			} else if(optopt == 's'){
 				printf("No dimension specified for dictionary size\n");
 				exit(1);
-			}
-			/*	default:
-				printf("try -h for help\n");
+			} else{
+				printf("Try -h for help\n");
 				exit(1);
-	*/ 	}	
+			}
+			break;
+			default:
+				printf("Try -h for help\n");
+				exit(1);
+	 	}	
 	}
 	if(compr == 1){	
 		if ((fd = open(source, O_RDONLY)) < 0) {
@@ -104,9 +114,5 @@ int main(int argc, char *argv []) {
     }*/
 
 	return 0;
-end:
- //   close(fd);
- //   bitio_close(fd_bitio);
-    exit(1);
 
 }
