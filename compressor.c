@@ -171,8 +171,12 @@ compress(int fd_r, struct bitio *fd_w, unsigned int dict_size, int v)
     }
     // File checksum
     checksum = (unsigned int)htole32(checksum_final(cs));
-    bitio_write(fd_w, (uint64_t *)&checksum, 32);
-
+    r = bitio_write(fd_w, (uint64_t *)&checksum, 32);
+    if (r != 32) {
+        printf("Error writing the compressed file\n");
+        return -1;
+    }
+    
     checksum_destroy(cs);
     htable_destroy(dictionary);
     close(fd_r);
