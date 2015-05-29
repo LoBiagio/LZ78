@@ -53,8 +53,6 @@ array_new(unsigned int size)
     if (tmp->dictionary == NULL){
         return NULL;
     }
-    //TODO memset should not be necessary
-    memset(tmp->dictionary,0,size * sizeof(DENTITY));
     tmp->nmemb = 0;
     tmp->dim = size;
     return tmp;        
@@ -107,7 +105,7 @@ explore_darray(struct darray *da, unsigned int index, char *buf, unsigned char *
         errno = EINVAL;
         return -1;
     }
-    offset = da->dim;    //TODO check buf size 
+    offset = da->dim; 
     if ( index < 256 ){ //we are already at the first level of the tree
         *value = (unsigned char)index;
         buf[offset] = (unsigned char)index;
@@ -184,27 +182,21 @@ explore_and_insert(struct darray* da, unsigned int father, unsigned int *index, 
         //exploring
         buf_len = explore_darray(da, *index, buf, old_value);
         
-	//TODO merge the dictionary full case and return statement.
-        //there may be the need for a dictionary reset
-        if (da->nmemb >= da->dim) {
-            array_reset(da);    //after dictionary reset, father must be reset!
-            *index = (unsigned int)0;
-        }
-        
-        return buf_len;
+    } else {
+    
+        //exploring
+        buf_len = explore_darray(da, *index, buf, old_value);
+    
+        //adding
+        da->dictionary[da->nmemb].father = father;
+        da->dictionary[da->nmemb].value = (unsigned int)*old_value;
+        da->nmemb++;
     }
-    
-    //exploring
-    buf_len = explore_darray(da, *index, buf, old_value);
-    
-    //adding
-    da->dictionary[da->nmemb].father = father;
-    da->dictionary[da->nmemb].value = (unsigned int)*old_value;
-    da->nmemb++;
     
     //there may be the need for a dictionary reset
     if (da->nmemb >= da->dim) {
-        array_reset(da);    //after dictionary reset, father must be reset!
+        array_reset(da);
+	/* After the dictionary, also father must be reset */
         *index = (unsigned int)0;
     }
     
@@ -303,8 +295,7 @@ decompress(int fd_w, struct bitio* fd_r, unsigned int dictionary_size, int v)
  * @param dict_size The content of dictionary lenght read in this file's header.
  * @return 0 if no errors occured, -1 otherwise
  */ 
-//TODO rimuovere errori su stdout
-int read_header(struct bitio *fd, unsigned int *dict_size) 
+int read_header(struct bitio *fd, unsigned int *dict_size, int v) 
 {
     int ret, i;
     char *string;
@@ -314,13 +305,13 @@ int read_header(struct bitio *fd, unsigned int *dict_size)
     // File name length
     ret = bitio_read(fd, &buf, 8);
     if (ret != 8) {
-        printf("Error reading file name length\n");
+        fprintf(stderr, "Error reading file name length\n");
         return -1;
     }
     checksum_update(cs, (char *)&buf, 1);
     string = (char *)malloc(buf + 1);
     if (string == NULL) {
-        printf("Error allocating memory for file name\n");
+        fprintf(stderr, "Error allocating memory for file name\n");
         return -1;
     }
     // File name
@@ -328,38 +319,44 @@ int read_header(struct bitio *fd, unsigned int *dict_size)
     for (i = 0; i < buf; i++) {
         ret = bitio_read(fd, &tmp, 8);
         if (ret != 8) {
-            printf("Error reading file name\n");
+            fprintf(stderr, "Error reading file name\n");
             free(string);
             return -1;
         }
         string[i] = (char)tmp;
         checksum_update(cs, (char *)&tmp, 1);
     }
-    printf("Original file name: %s\n", string);
+    if (v == 1) {
+        printf("Original file name: %s\n", string);
+    }
     free(string);
     // File size
     ret = bitio_read(fd, &buf, 64);
     if (ret != 64) {
-        printf("Error reading file size\n");
+        fprintf(stderr, "Error reading file size\n");
         return -1;
     }
     checksum_update(cs, (char *)&buf, 8);
     buf = le64toh(buf);
-    printf("Original file size: %lu bytes\n", (long unsigned int)buf);
+    if (v == 1) {
+        printf("Original file size: %lu bytes\n", (long unsigned int)buf);
+    }
     // Last modification
     ret = bitio_read(fd, &buf, 64);
     if (ret != 64) {
-        printf("Error reading file's last modification\n");
+        fprintf(stderr, "Error reading file's last modification\n");
         return -1;
     }
     checksum_update(cs, (char *)&buf, 8);
     buf = le64toh(buf);
-    printf("Last modification: %s\n", ctime((time_t *)&buf));
+    if (v == 1) {
+        printf("Last modification: %s\n", ctime((time_t *)&buf));
+    }
 
     // Dictionary length
     ret = bitio_read(fd, &buf, 32);
     if (ret != 32) {
-        printf("Error reading dictionary length\n");
+        fprintf(stderr, "Error reading dictionary length\n");
         return -1;
     }
     checksum_update(cs, (char *)&buf, 4);
@@ -368,14 +365,16 @@ int read_header(struct bitio *fd, unsigned int *dict_size)
     // Header checksum
     ret = bitio_read(fd, &buf, 32);
     if (ret != 32) {
-        printf("Error reading header checksum\n");
+        fprintf(stderr, "Error reading header checksum\n");
         return -1;
     }
     buf = le32toh(buf);
     if ((unsigned int)buf != checksum_final(cs)) {
-        printf("Error: header checksum mismatch\n");
+        fprintf(stderr, "Error: header checksum mismatch\n");
         return -1;
     }
-    printf("Header checksum matches\n");
+    if (v == 1) {
+        printf("Header checksum matches\n");
+    }
     return 0;
 }
