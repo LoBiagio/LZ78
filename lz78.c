@@ -8,7 +8,8 @@
 int compress(int,struct bitio*,unsigned int,int);
 int decompress(int,struct bitio*,unsigned int,int);
 int write_header(int, struct bitio*,char *,unsigned int);
-int read_header(struct bitio*,unsigned int *);
+int read_header(struct bitio*,unsigned int *, int);
+
 /**
  * @brief In the main we can choose these options without any argument:
  * c for compress, d for decompress, h for help, v for verbose;
@@ -97,10 +98,14 @@ int main(int argc, char *argv []) {
 			close(fd);
 			exit(1);
 		}
-		read_header(fd_bitio,&d_dict_size);
-		printf("Decompressing...\n");
+		read_header(fd_bitio,&d_dict_size, v);
+		if (v == 1) {
+		    printf("Decompressing...\n");
+		}
 		decompress(fd,fd_bitio,d_dict_size,v);
-		printf("Decompress completed\n");
+		if (v == 1) {
+		    printf("Decompress completed\n");
+		}
 	}
     		
   /*  for (index = optind; index < argc; index++){
