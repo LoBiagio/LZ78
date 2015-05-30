@@ -20,7 +20,7 @@ int read_header(struct bitio*,unsigned int *, int);
 int main(int argc, char *argv []) {
     int fd, s = 0, v = 0, compr = 0;
     //compr is set to 1 if we want to compress, set to 2 if we want to decompress
-    char *source, *dest;
+    char *source = NULL, *dest = NULL;
     unsigned int dict_size = DICT_SIZE, d_dict_size;
     struct bitio *fd_bitio;
     int opt;
@@ -44,7 +44,7 @@ int main(int argc, char *argv []) {
 			s = 1;
 			break;
 			case 'h':
-				printf("Usage: c for compress, d for decompress, i <input file>, o <output file>, d <dictionary_size>\n");
+				printf("Usage: c for compress, d for decompress, i <input file>, o <output file>, s <dictionary_size>\n");
 				break;
 			case 'v':
 				v = 1;

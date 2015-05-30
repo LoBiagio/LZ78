@@ -12,12 +12,16 @@
 # for more informations
 
 CC=gcc
-CPPFLAGS=-g -Wall -Werror
+CPPFLAGS=-O2 -Wall -Werror
 LDLIBS=-lm
 
 .PHONY: clean test
 
 all: lz78
+
+debug: CPPFLAGS=-g -Wall -Werror
+debug: lz78
+
 
 lz78: compressor.o decompressor.o htable.o bitio.o checksum.o
 

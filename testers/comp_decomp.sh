@@ -1,15 +1,16 @@
 #!/bin/bash
 
-root="../"
-
 #the list of sizes to be used for dictionary size when compressing
-sizes="2 1000 20000"
+sizes="1 2 1000 20000"
 
 #test counter
 t_counter=0
 
 #setting working directory
-cd "$(dirname "$0")"
+lz78_path=$(dirname $0)
+cd $lz78_path
+
+export PATH=$PATH:$lz78_path
 
 for i in ${sizes} ; do
 	#for each dimension, perform a test of all sample file
