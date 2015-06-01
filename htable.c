@@ -33,7 +33,7 @@ htable_new(int size) {
         return NULL;
     }
     table->nmemb = 0;
-    table->entries = (ENTRY *)calloc(size * (size / 2), sizeof(ENTRY));
+    table->entries = (ENTRY *)calloc(size + (size / 2), sizeof(ENTRY));
     if (table->entries == NULL) {
         printf("Error: dictionary allocation failed.\n");
         free(table);
