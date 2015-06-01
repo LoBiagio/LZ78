@@ -11,6 +11,23 @@ int write_header(int, struct bitio*,char *,unsigned int);
 int read_header(struct bitio*,unsigned int *, int);
 
 /**
+ * @brief Print the help
+ *
+ * This function prints the help on stdout
+ */
+void
+print_help()
+{
+    printf("Usage:\n\
+ lz78 -c -i <input_file> -o <output_file>\tfor compressing <input_file>\n\
+ lz78 -d -i <input_file> -o <output_file>\tfor decompressing <input_file>\n\n\
+Other options:\n\
+ -s <dictionary_size>\n\
+ -v \tverbose\n\
+ -h \tprint this help\n\n");
+}
+
+/**
  * @brief In the main we can choose these options without any argument:
  * c for compress, d for decompress, h for help, v for verbose;
  *    and these options with the relative argument:
@@ -18,7 +35,7 @@ int read_header(struct bitio*,unsigned int *, int);
  *    s with the size of the dictionary.
  */
 int main(int argc, char *argv []) {
-    int fd, s = 0, v = 0, compr = 0;
+    int fd, s = 0, v = 0, compr = 0, h = 0;
     //compr is set to 1 if we want to compress, set to 2 if we want to decompress
     char *source = NULL, *dest = NULL;
     unsigned int dict_size = DICT_SIZE, d_dict_size;
@@ -44,7 +61,8 @@ int main(int argc, char *argv []) {
             s = 1;
             break;
         case 'h':
-            printf("Usage: c for compress, d for decompress, i <input file>, o <output file>, s <dictionary_size>\n");
+	    h = 1;
+	    print_help();
             break;
         case 'v':
             v = 1;
@@ -69,6 +87,13 @@ int main(int argc, char *argv []) {
             exit(1);
          } //switch (opt)
     } //while ()
+
+    /* Checking if either -d or -c option has been set */
+    if (compr == 0 && h == 0) {
+	    fprintf(stderr, "Error: you must specify either -c to compress or -d to decompress\n");
+	    print_help();
+	    exit(1);
+    }
     
     if(compr == 1) {    //compressing
         if ((fd = open(source, O_RDONLY)) < 0) {
@@ -80,6 +105,10 @@ int main(int argc, char *argv []) {
             close(fd);
             exit(1);
         }
+	if (dict_size < 512) {
+		fprintf(stderr, "Warning: for better results, you should use a dictionary size greater than 512 elements.\nThe dictionary size has been set to 512\n");
+		dict_size = 512;
+	}
         write_header(fd,fd_bitio,source,dict_size);
         if(v == 1){
             printf("Compressing...\n");

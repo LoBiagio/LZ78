@@ -23,7 +23,7 @@ debug: CPPFLAGS=-g -Wall -Werror
 debug: lz78
 
 
-lz78: compressor.o decompressor.o htable.o bitio.o checksum.o
+lz78: lz78.o compressor.o decompressor.o htable.o bitio.o checksum.o
 
 compressor.o: htable.h bitio.h checksum.h
 
