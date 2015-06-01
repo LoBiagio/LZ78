@@ -253,10 +253,10 @@ decompress(int fd_w, struct bitio* fd_r, unsigned int dictionary_size, int v)
 	 * explore_and_insert().
 	 */
         father = (unsigned int)tmp;
-        write(fd_w, &buf[da->dim + 1 - buf_len], buf_len);
-        if (v == 1){
-            write(0, &buf[da->dim + 1 - buf_len], buf_len);
-            printf("\n");
+        ret = write(fd_w, &buf[da->dim + 1 - buf_len], buf_len);
+        if (ret < buf_len) {
+        	perror("Error in write()\n");
+        	return -1;
         }
         checksum_update(cs, (char *)&buf[da->dim + 1 - buf_len], buf_len);
 
