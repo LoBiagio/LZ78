@@ -128,7 +128,7 @@ htable_insert(TABLE *table, unsigned char value, unsigned int father, unsigned i
         // Couple <value,father> is already in table: the new_father takes the
         // index of the matched couple in the table
         if (father == 0) {
-            *new_father = (unsigned int)value;
+            *new_father = (unsigned int)value + 1;
         }
         else {
             *new_father = table->entries[position].index;
@@ -142,7 +142,7 @@ htable_insert(TABLE *table, unsigned char value, unsigned int father, unsigned i
         // new_father conresponds to the value of the node that has just been
         // insterted even if it is not a real insertion: the node with father 0
         // is already in the dictionary
-        *new_father = (unsigned int)value;
+        *new_father = (unsigned int)value + 1;
         // An insertion would have been performed if table wasn't full, so 1 is returned
         // and the father is passed to decompressor once this function ends
         return 1;
@@ -151,9 +151,9 @@ htable_insert(TABLE *table, unsigned char value, unsigned int father, unsigned i
     // Insert value
     table->entries[position].value = value;
     table->entries[position].father = father;
-    table->entries[position].index = table->nmemb + 256;
+    table->entries[position].index = table->nmemb + 257;
     table->nmemb++;
-    *new_father = (unsigned int)value;
+    *new_father = (unsigned int)(value + 1);
     return 1;
 }
 
@@ -165,7 +165,7 @@ int
 htable_index_bits(TABLE *table) {
     // Once the dictionary is cleared the index of the father is sent to the decompressor
     // That index is on the same bit length of table->dim
-    return table->nmemb == 0 ? (int)ceil(log2(table->dim + 256)) : (int)ceil(log2(table->nmemb + 256));
+    return table->nmemb == 0 ? (int)ceil(log2(table->dim + 257)) : (int)ceil(log2(table->nmemb + 257));
 }
 
 /**
