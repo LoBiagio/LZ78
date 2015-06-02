@@ -7,29 +7,11 @@
 #include <endian.h>
 #include <sys/stat.h>
 #include <sys/types.h>
+#include <libgen.h>
 #include "htable.h"
 #include "bitio.h"
 #include "checksum.h"
 
-/**
- * This function parses the string (which identifies the file-to-compress) to
- * check if a path has been specified insted of just the file name
- * @param string The string to parse
- * @param len The string length
- * @return The pointer to the location in which the file name starts
- */
-char
-*getfilename(char *string, int len) {
-    int i;
-    char *ret = string;
-    for (i = len - 1; i > 0; i--) {
-        ret = string + i - 1;
-        if (*ret == '/') {
-            return ret + 1;
-        }
-    }
-    return ret;
-}
 /**
  * Write header function
  * It writes informations about file to compress:
@@ -59,9 +41,11 @@ write_header(int fd_r, struct bitio *fd_w, char *filename, unsigned int dict_siz
         return -1;
     }
     // File name length
+    filename = basename(filename);
     size = strlen(filename);
-    filename = getfilename(filename, size);
-    size = strlen(filename);
+    if (size > 255) {
+        size = 255;
+    }
     ret = bitio_write(fd_w, (uint64_t *)&size, 8);
     if (ret != 8) {
         printf("Error writing file name length\n");
@@ -139,7 +123,7 @@ compress(int fd_r, struct bitio *fd_w, unsigned int dict_size, int v)
         // present. If an insertion is performed, htable_insert returns 1, 0
         // otherwise. The function also updates the new_father: in case of a
         // match in the tree, new_father = index of the match. Otherwise
-        // new_father = index of the couple <character which did not match,0>
+        // new_father = index of the couple <character which did not match,0>+1
         if (htable_insert(dictionary, c, father, &new_father) == 1) {
             i = htable_index_bits(dictionary);
             r = bitio_write(fd_w, (uint64_t *)&father, i);
@@ -176,7 +160,7 @@ compress(int fd_r, struct bitio *fd_w, unsigned int dict_size, int v)
         printf("Error writing the compressed file\n");
         return -1;
     }
-    
+
     checksum_destroy(cs);
     htable_destroy(dictionary);
     close(fd_r);
