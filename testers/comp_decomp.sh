@@ -19,7 +19,7 @@ for i in ${sizes} ; do
 		echo Test $t_counter
 		../lz78 -c -i ../samples/$f -o ../compressed -s $i
 		if [ $? -eq 0 ] ; then 
-			echo compressing ok
+			echo compressing $f ok
 		else
 			echo Error while compressing
 		fi
