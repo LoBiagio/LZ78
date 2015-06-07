@@ -106,8 +106,8 @@ int main(int argc, char *argv []) {
             exit(1);
         }
 	if (dict_size < 512) {
-		fprintf(stderr, "Warning: for better results, you should use a dictionary size greater than 512 elements.\nThe dictionary size has been set to 512\n");
-		dict_size = 512;
+		//fprintf(stderr, "Warning: for better results, you should use a dictionary size greater than 512 elements.\nThe dictionary size has been set to 512\n");
+		//dict_size = 512;
 	}
         write_header(fd,fd_bitio,source,dict_size);
         if(v == 1){

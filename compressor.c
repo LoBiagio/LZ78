@@ -125,7 +125,7 @@ compress(int fd_r, struct bitio *fd_w, unsigned int dict_size, int v)
         // match in the tree, new_father = index of the match. Otherwise
         // new_father = index of the couple <character which did not match,0>+1
         if (htable_insert(dictionary, c, father, &new_father) == 1) {
-            i = htable_index_bits(dictionary);
+            i = 14;//htable_index_bits(dictionary);
             r = bitio_write(fd_w, (uint64_t *)&father, i);
             if (r != i) {
                 printf("Error writing the compressed file\n");
@@ -139,7 +139,7 @@ compress(int fd_r, struct bitio *fd_w, unsigned int dict_size, int v)
         return -1;
     }
     // Last value not written in the cycle
-    i = htable_index_bits(dictionary);
+    i = 14;//htable_index_bits(dictionary);
     r = bitio_write(fd_w, (uint64_t *)&father, i);
     if (r != i) {
         printf("Error writing the compressed file\n");
@@ -147,8 +147,8 @@ compress(int fd_r, struct bitio *fd_w, unsigned int dict_size, int v)
     }
     // 0 is written to indicate the end of the compressed data
     father = 0;
-    i = htable_index_bits(dictionary);
-    r = bitio_write(fd_w, (uint64_t *)&father, htable_index_bits(dictionary));
+    i = 14;//htable_index_bits(dictionary);
+    r = bitio_write(fd_w, (uint64_t *)&father, i);
     if (r != i) {
         printf("Error writing the compressed file\n");
         return -1;

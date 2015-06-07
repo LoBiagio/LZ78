@@ -106,23 +106,23 @@ explore_darray(struct darray *da, unsigned int index, unsigned char *buf, unsign
         return -1;
     }
     offset = da->dim; 
-    if ( index < 256 ){ //we are already at the first level of the tree
-        *value = (unsigned char)index;
-        buf[offset] = (unsigned char)index;
+    if ( index < 257 ){ //we are already at the first level of the tree
+        *value = (unsigned char)index - 1;
+        buf[offset] = (unsigned char)index - 1;
         return 1;
     }
 
     /* Notice how we deal with the first 256 extended ASCII character which 
      * are not effectively stored into the dictionary.
      */
-    while (da->dictionary[index-256].father >= 256){ //explore the tree
-        buf[offset] = da->dictionary[index-256].value;
+    while (da->dictionary[index-257].father >= 257){ //explore the tree
+        buf[offset] = da->dictionary[index-257].value;
         offset--;
-        index = da->dictionary[index-256].father;
+        index = da->dictionary[index-257].father;
     }
-    buf[offset] = da->dictionary[index-256].value;
-    buf[--offset] = (unsigned char)da->dictionary[index-256].father;
-    *value = (unsigned char)da->dictionary[index-256].father;
+    buf[offset] = da->dictionary[index-257].value;
+    buf[--offset] = (unsigned char)da->dictionary[index-257].father - 1;
+    *value = (unsigned char)da->dictionary[index-257].father - 1;
     return da->dim + 1 - offset;
 }
 
@@ -172,7 +172,7 @@ explore_and_insert(struct darray* da, unsigned int father, unsigned int *index, 
      * In this case we must first add the new node and then start the 
      * dictionary exploration.
      */
-    if (*index == get_size(da) + 256) {
+    if (*index == get_size(da) + 257) {
         
         //adding
         da->dictionary[da->nmemb].father = father;
@@ -235,22 +235,14 @@ decompress(int fd_w, struct bitio* fd_r, unsigned int dictionary_size, int v)
     printf("Buffer allocation\n");
     }
     buf = calloc(dictionary_size + 1, sizeof(unsigned char));
-    while ((ret = bitio_read(fd_r, &tmp, (int)(log2(da->nmemb + 258)+1)) > 0)) {
+    //while ((ret = bitio_read(fd_r, &tmp, (int)(log2(da->nmemb + 258)+1)) > 0)) {
+    while ((ret = bitio_read(fd_r, &tmp, 14)) > 0) {
         if ((unsigned int)tmp == 0) {
             break;
         }
-        if (v == 1){
-            printf("Number of bits read:%d\n",(int)log2(da->nmemb + 257)+1);
-        }
-
-	/* Every encoding is shifted by one such that 0 is the dictionary root 
-	 * and all the single ASCII character goes from 1 to 257 */
-	tmp = tmp -1;
 
         buf_len = explore_and_insert(da, father, (unsigned int *)&tmp, &old_value, buf);
-        if (v == 1){
-            printf("Explore and insert completed. Father:%u, value read:%d, new value to add:%c\n",father,(int)tmp,old_value);
-        }
+        
 	/* The father of the next node to be added is the value read at this 
 	 * iteraction. This is always true except if the dictionary has just 
 	 * been reset. In this case the value of tmp is correctly set to 0 by 

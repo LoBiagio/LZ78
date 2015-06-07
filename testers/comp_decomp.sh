@@ -1,7 +1,7 @@
 #!/bin/bash
 
 #the list of sizes to be used for dictionary size when compressing
-sizes="1 2 1000 20000"
+sizes="1 2 1000 10000"
 
 #test counter
 t_counter=0
