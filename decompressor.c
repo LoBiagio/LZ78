@@ -107,6 +107,10 @@ explore_darray(struct darray *da, unsigned int index, unsigned char *buf, unsign
     }
     offset = da->dim; 
     if ( index < 257 ){ //we are already at the first level of the tree
+        /* The character we want has an ASCII code equal to index - 1 (since
+         * we used 0 for the root of the tree and all the other code for the 
+         * first layer of offspring.
+         */
         *value = (unsigned char)index - 1;
         buf[offset] = (unsigned char)index - 1;
         return 1;
@@ -120,8 +124,14 @@ explore_darray(struct darray *da, unsigned int index, unsigned char *buf, unsign
         offset--;
         index = da->dictionary[index-257].father;
     }
+    /* Now we insert the last character (first layer of the dictionary tree).
+     * We can not continue the exploration like we did before because the first 
+     * layer in the tree is not present inside the dictionary array, so father 
+     * is managed differently.
+     */
     buf[offset] = da->dictionary[index-257].value;
     buf[--offset] = (unsigned char)da->dictionary[index-257].father - 1;
+    /* We also put the right character in *value */
     *value = (unsigned char)da->dictionary[index-257].father - 1;
     return da->dim + 1 - offset;
 }
@@ -155,13 +165,16 @@ explore_and_insert(struct darray* da, unsigned int father, unsigned int *index, 
     
     /* If father is 0, then we are trying to insert a single non matching 
      * character so no real insertion is needed since the first 256 extended 
-     * ASII characters are only virtually present in the dictionary. 
+     * ASCII characters are only virtually present in the dictionary. 
      * This condition holds for every insertion after the dictionary has been
-     * reset
-     * */
+     * reset.
+     */
     if (father == 0) {
 
-        //exploring
+        /* Exploring
+         * Calling the explore_darray() set the right value for old_value.
+         */
+        //TODO check errors from buf_len
         buf_len = explore_darray(da, *index, buf, old_value);
         return buf_len;
     }
@@ -172,16 +185,25 @@ explore_and_insert(struct darray* da, unsigned int father, unsigned int *index, 
      * In this case we must first add the new node and then start the 
      * dictionary exploration.
      */
-    if (*index == get_size(da) + 257) {
+    //if (*index == get_size(da) + 257) {
         
-        //adding
+        //adding a node
         da->dictionary[da->nmemb].father = father;
+        
+        //exploring (and discovering value for the new insertion)
+        buf_len = explore_darray(da, *index, buf, old_value);
+        //setting value for the new node...
         da->dictionary[da->nmemb].value = (unsigned int)*old_value;
+        //...and inserting it as the last character in buf
+        if (*index == get_size(da) + 257) {
+        	/* We need to override the previous character only in case 
+        	 * of recoursive string
+        	 */
+	        buf[da->dim] = (unsigned int)*old_value;
+	}
         da->nmemb++;
         
-        //exploring
-        buf_len = explore_darray(da, *index, buf, old_value);
-        
+/*
     } else {
     
         //exploring
@@ -192,6 +214,7 @@ explore_and_insert(struct darray* da, unsigned int father, unsigned int *index, 
         da->dictionary[da->nmemb].value = (unsigned int)*old_value;
         da->nmemb++;
     }
+*/
     
     //there may be the need for a dictionary reset
     if (da->nmemb >= da->dim) {
@@ -263,7 +286,7 @@ decompress(int fd_w, struct bitio* fd_r, unsigned int dictionary_size, int v)
     ret = bitio_read(fd_r, &tmp, 32);
     ret = le32toh((int)tmp);
     if (ret != checksum_final(cs)) {
-        printf("Errore checksum\n");
+        printf("Checksum error\n");
         return -1;
     }
     if (v == 1) {
