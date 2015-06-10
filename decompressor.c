@@ -6,11 +6,9 @@
 #include <errno.h>
 #include <string.h>
 #include <time.h>
-#include <math.h>
 
 #include "checksum.h"
 #include "bitio.h"
-#include "log2.h"
 
 /* This is the initial number of bit to be read by the decompressor.
  * There are 258 symbols in the compressor dictionary when the first index is 
@@ -43,19 +41,14 @@ struct darray
     unsigned int nmemb; /** Number of entities currently stored */
     unsigned int dim; /** Maximum number of elements that can be stored */
     
-    /** how many bit we need to read at each iteration. This is based on the 
-     * number of entries in the dictionary + 1 because we need to follow the 
-     * compressor (which is always one step beyond the decompressor)
+    /** 
+     * how many bit we need to read at each iteration. This is based on the 
+     * number of entries in the dictionary + 2 because we need to follow the 
+     * compressor (which is always two step beyond the decompressor, see the 
+     * decompress() function for more details)
      */
     unsigned int how_many_bits;
 
-    /** This is used to compute the maximum number of bit the decompressor read
-     * for a specific conversion. It is used to correctly read 9 bit at the 
-     * first conversion and then read log2(da->dim) every time the dictionary 
-     * is cleared.
-     */
-    unsigned int max_bits;
-    
     /** Used to decide when to increment the value of how_many_bits. */
     unsigned int threshold; 
 };
@@ -81,7 +74,7 @@ array_new(unsigned int size)
     }
     tmp->nmemb = 0;
     tmp->dim = size;
-    tmp->max_bits = tmp->how_many_bits = INITIAL_BITS_NUMBER;
+    tmp->how_many_bits = INITIAL_BITS_NUMBER;
     tmp->threshold = MAX_INITIAL_NUMBER_OF_ELEMENTS;
     return tmp;
 }
@@ -232,22 +225,18 @@ explore_and_insert(struct darray* da, unsigned int father, unsigned int *index, 
     }
     da->nmemb++;
     
-    /* checking if we must increase the number of read bit */
-    /* At every instant we have exactly da->nmemb symbols in our dictionary 
-     * + 257 non explicitly inserted symbols (root + first layer of root 
-     * offsprings) + 1 (because the compressor's dictionary is always one entry 
-     * greater than the decompressor's one*/
-    if (da->nmemb + 258 > da->threshold) {
+    /* 
+     * Checking if we must increase the number of read bit.
+     * At every instant we have exactly da->nmemb symbols in our dictionary 
+     * + 257 non explicitly inserted symbols (root + first layer of root's 
+     * offsprings). Plus we have to consider the fact that our decompressor 
+     * always works with 2 entries less in its dictionary than the compressor's 
+     * dictionary at the same moment (see decompress() function for more 
+     * details). So the effective number of possible codes we may receive at a 
+     * given istant is da->nmenb + 257 + 2.
+     */
+    if (da->nmemb + 259 > da->threshold) {
         da->how_many_bits++;
-
-	/* The check below is performed to update the maximum number of bit 
-	 * read during the conversion (this is the result of log2(da->dim) 
-	 * after the dictionary has been filled for the first time.
-	 * We need it to read the right number of bits every time the dictionary
-	 * is cleared. */
-	if (da->max_bits < da->how_many_bits) {
-		da->max_bits = da->how_many_bits;
-	}
         da->threshold <<=1;
     }
 
@@ -267,25 +256,35 @@ explore_and_insert(struct darray* da, unsigned int father, unsigned int *index, 
  * 
  * This is based on how many symbols are present in the compressor's dictionary 
  * at every istant. This can be computed as:
- *      <number of symbols in decompressor's dictionary> + 257 + 1
+ *      <number of symbols in decompressor's dictionary> + 257 + 2
  * The formula above works since 257 is the number of implicit symbols not 
  * really present in both dictionaries (the decompressor and decompressor's 
- * ones) and the + 1 coefficient depends on the fact that the compressor's 
+ * ones) and the + 2 term depends on the fact that the compressor's 
  * dictionary is always bigger than the decompressor's one (it always contains 
- * one additional symbol).
+ * one additional symbol, see decompress() function for more details).
  */
 unsigned int
 darray_bits_number(struct darray *da)
 {
-    /* This correctly read 9 bits at the first read, then it returns 
-     * log2(da->dim) every time the dictionary is cleared. */
-    return (da->nmemb == da->dim - 1) ? htable_log2(da->dim + 258) : htable_log2(da->nmemb + 258);
+    return da->how_many_bits;
 }
 
 /**
  * @brief This function start the decompressing of a file.
  * This function also read the header and validate the checksum.
  * 
+ * This decompressor is based on exploring and updating the dictionary 
+ * accordingly to the compressor. Our decompressor's dictionary works in such 
+ * a way it is always 2 elements smaller than the compressor's one. This is 
+ * because every code written by the compressor means that it has performed an 
+ * insertion into its dictionary. Our decompressor read a first value only to 
+ * choose the effective father of the node that will be inserted at the next 
+ * iteration, so no insertion is performed after the first code has been 
+ * received. Alsoduring the second read, no entry is inserted into the 
+ * decompressor's dictionary because the character value for the new node is 
+ * not known yet. So the decompressor's dictionary is always 2 entry smaller 
+ * than the compressor's one.
+ *
  * @param fd_w The input file descriptor. decompress() expected it to be 
  * already open.
  * @param fd_r The output file descriptor. decompress() expect it to be 
@@ -304,7 +303,7 @@ decompress(int fd_w, struct bitio* fd_r, unsigned int dictionary_size, int v)
     unsigned char old_value;
     struct darray *da;
     unsigned char *buf;
-    unsigned int father = 0, buf_len, bit_len, read_counter = 0;
+    unsigned int father = 0, buf_len, bit_len;
     CHECKENV *cs = checksum_init();
     if( (da = array_new(dictionary_size)) == NULL){
         perror("error on array_new");
@@ -315,14 +314,7 @@ decompress(int fd_w, struct bitio* fd_r, unsigned int dictionary_size, int v)
     }
     buf = calloc(dictionary_size + 1, sizeof(unsigned char));
     bit_len = darray_bits_number(da);
-    //while ((ret = bitio_read(fd_r, &tmp, darray_bits_number(da))) > 0) {
     while ((ret = bitio_read(fd_r, &tmp, bit_len)) > 0) {
-        ++read_counter;
-        if (bit_len == 10) {
-            printf("%d\n", read_counter);
-        }
-        //TODO debug
-        //printf("%d\n", darray_bits_number(da));
         if ((unsigned int)tmp == 0) {
             break;
         }

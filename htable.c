@@ -3,9 +3,6 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
-#include <math.h>
-
-#include "log2.h"
 
 /* This is the initial number of bit to be written by the compressor.
  * There are 258 symbols in the compressor dictionary when the first index is 
@@ -15,6 +12,26 @@
 /* With how_many_bits set to INITIAL_BITS_NUMBER we have at most 512 different 
  * symbols */
 #define MAX_INITIAL_NUMBER_OF_ELEMENTS 512
+/**
+ * @brief This compute ceil(log2(n)) without using FPU
+ *
+ * This is used to compute the log2 of a number without using functions from 
+ * the math library (i.e. without FPU support).
+ * 
+ * @param logarithm argument
+ * @return (unsigned int)ceil(log2(2))
+ */
+unsigned int
+htable_log2(unsigned int n)
+{
+    unsigned int how_many_bits = 1, threshold = 2;
+    while (n > threshold) {
+        how_many_bits++;
+        threshold <<= 1;
+    }
+    
+    return how_many_bits;
+}
 
 typedef struct hentry
 {
@@ -29,7 +46,8 @@ struct htable
     int nmemb;
     int dim;
     
-    /** how many bit we need to write at each iteration. This is based on the 
+    /**
+     * how many bit we need to write at each iteration. This is based on the 
      * number of entries in the dictionary
      */
     unsigned int how_many_bits;
@@ -199,7 +217,7 @@ htable_index_bits(TABLE *table) {
     // Once the dictionary is cleared the index of the father is sent to the 
     // decompressor.
     // That index is on the same bit length of table->dim
-    return table->nmemb == 0 ? htable_log2(table->dim + 257) : htable_log2(table->nmemb + 257);
+    return table->nmemb == 0 ? htable_log2(table->dim + 257) : table->how_many_bits;
 }
 
 /**
