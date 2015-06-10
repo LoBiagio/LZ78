@@ -10,6 +10,16 @@
 
 #include "checksum.h"
 #include "bitio.h"
+#include "log2.h"
+
+/* This is the initial number of bit to be read by the decompressor.
+ * There are 258 symbols in the compressor dictionary when the first index is 
+ * received.*/
+#define INITIAL_BITS_NUMBER 9
+
+/* With how_many_bits set to INITIAL_BITS_NUMBER we have at most 512 different 
+ * symbols */
+#define MAX_INITIAL_NUMBER_OF_ELEMENTS 512
 
 /**
  * @brief This struct represent a decompressor dictionary entry.
@@ -30,8 +40,24 @@ typedef struct
 struct darray
 {
     DENTITY* dictionary; /** The array of dictionary's entries */
-     unsigned int nmemb; /** Number of entities currently stored */
-     unsigned int dim; /** Maximum number of elements that can be stored */
+    unsigned int nmemb; /** Number of entities currently stored */
+    unsigned int dim; /** Maximum number of elements that can be stored */
+    
+    /** how many bit we need to read at each iteration. This is based on the 
+     * number of entries in the dictionary + 1 because we need to follow the 
+     * compressor (which is always one step beyond the decompressor)
+     */
+    unsigned int how_many_bits;
+
+    /** This is used to compute the maximum number of bit the decompressor read
+     * for a specific conversion. It is used to correctly read 9 bit at the 
+     * first conversion and then read log2(da->dim) every time the dictionary 
+     * is cleared.
+     */
+    unsigned int max_bits;
+    
+    /** Used to decide when to increment the value of how_many_bits. */
+    unsigned int threshold; 
 };
 
 /**
@@ -55,7 +81,9 @@ array_new(unsigned int size)
     }
     tmp->nmemb = 0;
     tmp->dim = size;
-    return tmp;        
+    tmp->max_bits = tmp->how_many_bits = INITIAL_BITS_NUMBER;
+    tmp->threshold = MAX_INITIAL_NUMBER_OF_ELEMENTS;
+    return tmp;
 }
 
 /**
@@ -65,6 +93,8 @@ void
 array_reset (struct darray *da){
     memset(da->dictionary, 0, sizeof(DENTITY)*da->dim);
     da->nmemb = 0;
+    da->how_many_bits = INITIAL_BITS_NUMBER;
+    da->threshold = MAX_INITIAL_NUMBER_OF_ELEMENTS;
 }
 
 /**
@@ -178,52 +208,78 @@ explore_and_insert(struct darray* da, unsigned int father, unsigned int *index, 
         buf_len = explore_darray(da, *index, buf, old_value);
         return buf_len;
     }
-    
+
     /* The check below must handle the case when the compressor sents a value 
      * not present in the dictionary yet. In this case the character value for 
      * the newly inserted node is the value seen at the previous iteration.
      * In this case we must first add the new node and then start the 
      * dictionary exploration.
      */
-    //if (*index == get_size(da) + 257) {
-        
-        //adding a node
-        da->dictionary[da->nmemb].father = father;
-        
-        //exploring (and discovering value for the new insertion)
-        buf_len = explore_darray(da, *index, buf, old_value);
-        //setting value for the new node...
-        da->dictionary[da->nmemb].value = (unsigned int)*old_value;
-        //...and inserting it as the last character in buf
-        if (*index == get_size(da) + 257) {
-        	/* We need to override the previous character only in case 
-        	 * of recoursive string
-        	 */
-	        buf[da->dim] = (unsigned int)*old_value;
-	}
-        da->nmemb++;
-        
-/*
-    } else {
+            
+    //adding a node
+    da->dictionary[da->nmemb].father = father;
     
-        //exploring
-        buf_len = explore_darray(da, *index, buf, old_value);
-    
-        //adding
-        da->dictionary[da->nmemb].father = father;
-        da->dictionary[da->nmemb].value = (unsigned int)*old_value;
-        da->nmemb++;
+    //exploring (and discovering value for the new insertion)
+    buf_len = explore_darray(da, *index, buf, old_value);
+    //setting value for the new node...
+    da->dictionary[da->nmemb].value = (unsigned int)*old_value;
+    //...and inserting it as the last character in buf
+    if (*index == get_size(da) + 257) {
+        /* We need to override the previous character only in case 
+         * of recoursive string
+         */
+        buf[da->dim] = (unsigned int)*old_value;
     }
-*/
+    da->nmemb++;
     
-    //there may be the need for a dictionary reset
+    /* checking if we must increase the number of read bit */
+    /* At every instant we have exactly da->nmemb symbols in our dictionary 
+     * + 257 non explicitly inserted symbols (root + first layer of root 
+     * offsprings) + 1 (because the compressor's dictionary is always one entry 
+     * greater than the decompressor's one*/
+    if (da->nmemb + 258 > da->threshold) {
+        da->how_many_bits++;
+
+	/* The check below is performed to update the maximum number of bit 
+	 * read during the conversion (this is the result of log2(da->dim) 
+	 * after the dictionary has been filled for the first time.
+	 * We need it to read the right number of bits every time the dictionary
+	 * is cleared. */
+	if (da->max_bits < da->how_many_bits) {
+		da->max_bits = da->how_many_bits;
+	}
+        da->threshold <<=1;
+    }
+
+    /* there may be the need for a dictionary reset */
     if (da->nmemb >= da->dim) {
         array_reset(da);
 	/* After the dictionary, also father must be reset */
         *index = (unsigned int)0;
     }
-    
+        
     return buf_len;        
+}
+
+/**
+ * @brief returns the number of bits that must be read by the decompressor at 
+ * each iteration.
+ * 
+ * This is based on how many symbols are present in the compressor's dictionary 
+ * at every istant. This can be computed as:
+ *      <number of symbols in decompressor's dictionary> + 257 + 1
+ * The formula above works since 257 is the number of implicit symbols not 
+ * really present in both dictionaries (the decompressor and decompressor's 
+ * ones) and the + 1 coefficient depends on the fact that the compressor's 
+ * dictionary is always bigger than the decompressor's one (it always contains 
+ * one additional symbol).
+ */
+unsigned int
+darray_bits_number(struct darray *da)
+{
+    /* This correctly read 9 bits at the first read, then it returns 
+     * log2(da->dim) every time the dictionary is cleared. */
+    return (da->nmemb == da->dim - 2) ? htable_log2(da->dim + 257) : da->how_many_bits;
 }
 
 /**
@@ -248,7 +304,7 @@ decompress(int fd_w, struct bitio* fd_r, unsigned int dictionary_size, int v)
     unsigned char old_value;
     struct darray *da;
     unsigned char *buf;
-    unsigned int father = 0, buf_len;
+    unsigned int father = 0, buf_len, bit_len, read_counter = 0;
     CHECKENV *cs = checksum_init();
     if( (da = array_new(dictionary_size)) == NULL){
         perror("error on array_new");
@@ -258,19 +314,26 @@ decompress(int fd_w, struct bitio* fd_r, unsigned int dictionary_size, int v)
     printf("Buffer allocation\n");
     }
     buf = calloc(dictionary_size + 1, sizeof(unsigned char));
-    //while ((ret = bitio_read(fd_r, &tmp, (int)(log2(da->nmemb + 258)+1)) > 0)) {
-    while ((ret = bitio_read(fd_r, &tmp, 14)) > 0) {
+    bit_len = darray_bits_number(da);
+    //while ((ret = bitio_read(fd_r, &tmp, darray_bits_number(da))) > 0) {
+    while ((ret = bitio_read(fd_r, &tmp, bit_len)) > 0) {
+        ++read_counter;
+        if (bit_len == 10) {
+            printf("%d\n", read_counter);
+        }
+        //TODO debug
+        //printf("%d\n", darray_bits_number(da));
         if ((unsigned int)tmp == 0) {
             break;
         }
 
         buf_len = explore_and_insert(da, father, (unsigned int *)&tmp, &old_value, buf);
         
-	/* The father of the next node to be added is the value read at this 
-	 * iteraction. This is always true except if the dictionary has just 
-	 * been reset. In this case the value of tmp is correctly set to 0 by 
-	 * explore_and_insert().
-	 */
+        /* The father of the next node to be added is the value read at this 
+         * iteraction. This is always true except if the dictionary has just 
+         * been reset. In this case the value of tmp is correctly set to 0 by 
+         * explore_and_insert().
+         */
         father = (unsigned int)tmp;
         ret = write(fd_w, &buf[da->dim + 1 - buf_len], buf_len);
         if (ret < buf_len) {
@@ -278,6 +341,9 @@ decompress(int fd_w, struct bitio* fd_r, unsigned int dictionary_size, int v)
         	return -1;
         }
         checksum_update(cs, (char *)&buf[da->dim + 1 - buf_len], buf_len);
+        
+        /* upgrading bit_len according to current dictionary size */
+        bit_len = darray_bits_number(da);
 
     }
 

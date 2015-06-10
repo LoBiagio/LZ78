@@ -5,6 +5,17 @@
 #include <stdio.h>
 #include <math.h>
 
+#include "log2.h"
+
+/* This is the initial number of bit to be written by the compressor.
+ * There are 258 symbols in the compressor dictionary when the first index is 
+ * sent.*/
+#define INITIAL_BITS_NUMBER 9
+
+/* With how_many_bits set to INITIAL_BITS_NUMBER we have at most 512 different 
+ * symbols */
+#define MAX_INITIAL_NUMBER_OF_ELEMENTS 512
+
 typedef struct hentry
 {
     unsigned char value;
@@ -17,6 +28,14 @@ struct htable
     ENTRY *entries;
     int nmemb;
     int dim;
+    
+    /** how many bit we need to write at each iteration. This is based on the 
+     * number of entries in the dictionary
+     */
+    unsigned int how_many_bits;
+    
+    /** Used to decide when to increment the value of how_many_bits. */
+    unsigned int threshold;
 };
 
 /**
@@ -39,6 +58,9 @@ htable_new(int size) {
         free(table);
         return NULL;
     }
+    
+    table->how_many_bits = INITIAL_BITS_NUMBER;
+    table->threshold = MAX_INITIAL_NUMBER_OF_ELEMENTS;
     table->dim = size;
     return table;
 }
@@ -52,6 +74,8 @@ void
 htable_clear(TABLE *table) {
     memset(table->entries, 0, (table->dim + (table->dim / 2))* sizeof(ENTRY));
     table->nmemb = 0;
+    table->how_many_bits = INITIAL_BITS_NUMBER;
+    table->threshold = MAX_INITIAL_NUMBER_OF_ELEMENTS;
 }
 
 /**
@@ -154,6 +178,15 @@ htable_insert(TABLE *table, unsigned char value, unsigned int father, unsigned i
     table->entries[position].index = table->nmemb + 257;
     table->nmemb++;
     *new_father = (unsigned int)(value + 1);
+    
+    /* checking if we must increase the number of to be written bit.
+     * At every instant we have exactly table->nmemb symbols in our dictionary 
+     * + 257 non explicitly inserted symbols (root + first layer of root 
+     * offsprings)*/
+    if (table->nmemb + 257 > table->threshold) {
+        table->how_many_bits++;
+        table->threshold <<= 1;
+    }
     return 1;
 }
 
@@ -161,11 +194,12 @@ htable_insert(TABLE *table, unsigned char value, unsigned int father, unsigned i
  * This function returns the minimum number of bits on which the index of the
  * elements in the table should be rapresented
  */
-int
+unsigned int
 htable_index_bits(TABLE *table) {
-    // Once the dictionary is cleared the index of the father is sent to the decompressor
+    // Once the dictionary is cleared the index of the father is sent to the 
+    // decompressor.
     // That index is on the same bit length of table->dim
-    return table->nmemb == 0 ? (int)ceil(log2(table->dim + 257)) : (int)ceil(log2(table->nmemb + 257));
+    return table->nmemb == 0 ? htable_log2(table->dim + 257) : htable_log2(table->nmemb + 257);
 }
 
 /**
@@ -176,5 +210,7 @@ htable_destroy(TABLE *table) {
     htable_clear(table);
     free(table->entries);
     table->dim = 0;
+    table->threshold = 0;
+    table->how_many_bits = 0;
     free(table);
 }
