@@ -279,7 +279,7 @@ darray_bits_number(struct darray *da)
 {
     /* This correctly read 9 bits at the first read, then it returns 
      * log2(da->dim) every time the dictionary is cleared. */
-    return (da->nmemb == da->dim - 2) ? htable_log2(da->dim + 257) : da->how_many_bits;
+    return (da->nmemb == da->dim - 1) ? htable_log2(da->dim + 258) : htable_log2(da->nmemb + 258);
 }
 
 /**
